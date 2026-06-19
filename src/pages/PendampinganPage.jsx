@@ -380,7 +380,7 @@ function PrintModal({ item, mode, settings, instrumen, madrasah, pengawas, onClo
           </div>
         )}
 
-        <PrintSignature settings={settings} namaPengawas={pengawas?.nama} tanggal={item.tanggal} />
+        <PrintSignature settings={settings} namaPengawas={pengawas?.nama} nipPengawas={pengawas?.nip} tanggal={item.tanggal} />
       </div>
     </Modal>
   )

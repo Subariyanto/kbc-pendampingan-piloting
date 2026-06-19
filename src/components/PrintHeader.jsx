@@ -23,9 +23,31 @@ export default function PrintHeader({ settings, judul = 'LAPORAN PENDAMPINGAN IM
   )
 }
 
-export function PrintSignature({ settings, namaPengawas = '____________________', tempat = 'Jember', tanggal }) {
+export function PrintSignature({ settings, namaPengawas = '____________________', nipPengawas, tempat = 'Jember', tanggal }) {
   const t = tanggal ? new Date(tanggal) : new Date()
   const tanggalLabel = t.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  // Auto-detect: kalau pembuat dokumen adalah Ketua Pokjawas sendiri,
+  // hilangkan blok "Mengetahui Ketua Pokjawas" karena dia yang menandatangani sendiri.
+  const norm = (s) => String(s || '').trim().toLowerCase().replace(/[.,]/g, '')
+  const pembuatAdalahKetua =
+    norm(namaPengawas) === norm(settings.ketuaPokjawas) ||
+    (nipPengawas && settings.nipKetua && String(nipPengawas).replace(/\D/g, '') === String(settings.nipKetua).replace(/\D/g, ''))
+
+  if (pembuatAdalahKetua) {
+    return (
+      <div className="flex justify-end mt-10 text-sm font-serif">
+        <div className="text-left" style={{ minWidth: 280 }}>
+          <p>{tempat}, {tanggalLabel}</p>
+          <p>Pengawas Pendamping,</p>
+          <div style={{ height: 80 }} />
+          <p className="font-semibold underline">{namaPengawas}</p>
+          {nipPengawas && <p>NIP. {nipPengawas}</p>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-2 gap-12 mt-10 text-sm font-serif">
       <div>
@@ -40,6 +62,7 @@ export function PrintSignature({ settings, namaPengawas = '____________________'
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{namaPengawas}</p>
+        {nipPengawas && <p>NIP. {nipPengawas}</p>}
       </div>
     </div>
   )
