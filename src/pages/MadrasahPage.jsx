@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import PageHeader from '../components/PageHeader.jsx'
 import Modal, { ConfirmDialog } from '../components/Modal.jsx'
 import Badge from '../components/Badge.jsx'
@@ -8,8 +8,9 @@ import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
 import { JENJANG_OPTIONS, STATUS_NEGERI_SWASTA, STATUS_PILOTING } from '../lib/constants.js'
-import { downloadCSV, formatDate, searchMatch, statusMadrasahByPct, STATUS_MADRASAH_TONES } from '../lib/utils.js'
+import { downloadCSV, formatDate, searchMatch, statusMadrasahByPct, STATUS_MADRASAH_TONES, uid } from '../lib/utils.js'
 import { rataRataMadrasah } from '../lib/scoring.js'
+import { downloadMadrasahTemplate, parseMadrasahImport } from '../lib/excelMadrasah.js'
 
 const EMPTY = {
   nama: '', nsm: '', npsn: '', jenjang: 'MI', statusNS: 'Negeri',
@@ -27,6 +28,9 @@ export default function MadrasahPage() {
   const [editing, setEditing] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [print, setPrint] = useState(false)
+  const [importPreview, setImportPreview] = useState(null) // { rows, errors }
+  const [importing, setImporting] = useState(false)
+  const fileImportRef = useRef(null)
 
   const data = useMemo(() => {
     return scope.madrasah
@@ -79,6 +83,76 @@ export default function MadrasahPage() {
     toast.success('Data CSV diunduh')
   }
 
+  const onTemplate = async () => {
+    try {
+      await downloadMadrasahTemplate({ pengawasList: state.pengawas, tahunPelajaran: state.settings.tahunPelajaran })
+      toast.success('Templat Excel diunduh')
+    } catch (err) {
+      toast.error('Gagal membuat templat: ' + err.message)
+    }
+  }
+
+  const onImportFile = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const result = await parseMadrasahImport(file)
+      setImportPreview(result)
+    } catch (err) {
+      toast.error('Gagal membaca file: ' + err.message)
+    } finally {
+      e.target.value = ''
+    }
+  }
+
+  const confirmImport = async () => {
+    if (!importPreview?.rows?.length) return
+    setImporting(true)
+    let created = 0
+    let updated = 0
+    try {
+      for (const row of importPreview.rows) {
+        // Cari existing by NSM atau Nama+Jenjang
+        const existing =
+          (row.nsm && state.madrasah.find((m) => m.nsm && m.nsm === row.nsm)) ||
+          state.madrasah.find((m) => m.nama.toLowerCase() === row.nama.toLowerCase() && m.jenjang === row.jenjang)
+
+        // Resolve pengawas by name
+        let pengawasId = ''
+        if (row.pengawas) {
+          const p = state.pengawas.find((x) => x.nama.toLowerCase() === row.pengawas.toLowerCase())
+          pengawasId = p?.id || ''
+        }
+
+        const payload = {
+          id: existing?.id,
+          nama: row.nama,
+          nsm: row.nsm,
+          npsn: row.npsn,
+          jenjang: row.jenjang,
+          statusNS: row.statusNS,
+          kecamatan: row.kecamatan,
+          kepala: row.kepala,
+          hp: row.hp,
+          email: row.email,
+          pengawasId,
+          tahunPelajaran: row.tahunPelajaran || state.settings.tahunPelajaran,
+          statusPiloting: row.statusPiloting,
+          catatan: row.catatan
+        }
+        await addOrUpdate('madrasah', payload)
+        if (existing) updated += 1
+        else created += 1
+      }
+      toast.success(`Import selesai: ${created} ditambah, ${updated} diperbarui`)
+      setImportPreview(null)
+    } catch (err) {
+      toast.error('Gagal import: ' + err.message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -87,6 +161,19 @@ export default function MadrasahPage() {
         icon="🏫"
         actions={
           <>
+            <button className="btn-ghost" onClick={onTemplate}>📄 Templat Excel</button>
+            {scope.canEditFull && (
+              <>
+                <input
+                  ref={fileImportRef}
+                  type="file"
+                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  className="hidden"
+                  onChange={onImportFile}
+                />
+                <button className="btn-toska" onClick={() => fileImportRef.current?.click()}>📥 Import Excel</button>
+              </>
+            )}
             <button className="btn-ghost" onClick={() => setPrint(true)}>🖨 Cetak</button>
             <button className="btn-ghost" onClick={exportCSV}>⬇ CSV</button>
             {scope.canEditFull && (
@@ -193,6 +280,15 @@ export default function MadrasahPage() {
       />
 
       <PrintMadrasah open={print} onClose={() => setPrint(false)} data={data} settings={state.settings} />
+
+      <ImportPreview
+        open={!!importPreview}
+        onClose={() => setImportPreview(null)}
+        preview={importPreview}
+        onConfirm={confirmImport}
+        importing={importing}
+        existingMadrasah={state.madrasah}
+      />
     </>
   )
 }
@@ -278,6 +374,75 @@ function PrintMadrasah({ open, onClose, data, settings }) {
         </table>
         <p className="mt-6 text-xs text-slate-500">Dicetak {formatDate(new Date())}.</p>
       </div>
+    </Modal>
+  )
+}
+
+function ImportPreview({ open, onClose, preview, onConfirm, importing, existingMadrasah }) {
+  if (!open || !preview) return null
+  const { rows = [], errors = [] } = preview
+  const matchInfo = (row) => {
+    const byNSM = row.nsm && existingMadrasah.find((m) => m.nsm === row.nsm)
+    const byName = !byNSM && existingMadrasah.find((m) => m.nama.toLowerCase() === row.nama.toLowerCase() && m.jenjang === row.jenjang)
+    if (byNSM) return { tone: 'gold', label: 'UPDATE (NSM)' }
+    if (byName) return { tone: 'gold', label: 'UPDATE (nama+jenjang)' }
+    return { tone: 'emerald', label: 'BARU' }
+  }
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Pratinjau Import — ${rows.length} baris valid${errors.length ? `, ${errors.length} error` : ''}`}
+      size="xl"
+      footer={
+        <>
+          <button className="btn-ghost" onClick={onClose} disabled={importing}>Batal</button>
+          <button className="btn-primary" onClick={onConfirm} disabled={importing || !rows.length}>
+            {importing ? 'Mengimpor…' : `Konfirmasi Import (${rows.length})`}
+          </button>
+        </>
+      }
+    >
+      {errors.length > 0 && (
+        <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          <p className="font-semibold mb-1">Baris dengan error ({errors.length}) — akan dilewati:</p>
+          <ul className="list-disc ml-5 space-y-0.5 text-xs">
+            {errors.slice(0, 20).map((e, i) => <li key={i}>{e}</li>)}
+            {errors.length > 20 && <li>… dan {errors.length - 20} error lainnya</li>}
+          </ul>
+        </div>
+      )}
+      {rows.length ? (
+        <div className="overflow-x-auto max-h-[55vh]">
+          <table className="table-clean">
+            <thead>
+              <tr>
+                <th>Baris</th><th>Status</th><th>Nama</th><th>Jenjang</th>
+                <th>NSM</th><th>Kecamatan</th><th>Kepala</th><th>Pengawas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const m = matchInfo(r)
+                return (
+                  <tr key={r.rowNumber}>
+                    <td>{r.rowNumber}</td>
+                    <td><Badge tone={m.tone}>{m.label}</Badge></td>
+                    <td className="font-medium text-navy-900">{r.nama}</td>
+                    <td>{r.jenjang}</td>
+                    <td className="font-mono text-xs">{r.nsm}</td>
+                    <td>{r.kecamatan}</td>
+                    <td>{r.kepala}</td>
+                    <td>{r.pengawas}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-sm text-slate-500">Tidak ada baris valid untuk diimpor.</p>
+      )}
     </Modal>
   )
 }
