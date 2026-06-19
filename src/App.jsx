@@ -13,6 +13,7 @@ import TindakLanjutPage from './pages/TindakLanjutPage.jsx'
 import LaporanPage from './pages/LaporanPage.jsx'
 import PengaturanPage from './pages/PengaturanPage.jsx'
 import DiagnosticPage from './pages/DiagnosticPage.jsx'
+import PenggunaPage from './pages/PenggunaPage.jsx'
 
 function PrivateRoute({ children, allowed }) {
   const { user } = useAuth()
@@ -64,6 +65,14 @@ export default function App() {
                   }
                 />
                 <Route path="/diagnostic" element={<DiagnosticPage />} />
+                <Route
+                  path="/pengguna"
+                  element={
+                    <PrivateRoute allowed={['admin']}>
+                      <PenggunaPage />
+                    </PrivateRoute>
+                  }
+                />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </AppLayout>

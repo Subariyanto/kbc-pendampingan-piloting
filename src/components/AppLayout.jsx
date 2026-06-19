@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/laporan', label: 'Laporan', icon: '📊', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/pengaturan', label: 'Pengaturan', icon: '⚙️', roles: ['admin'] },
+  { to: '/pengguna', label: 'Kelola Pengguna', icon: '👥', roles: ['admin'] },
   { to: '/diagnostic', label: 'Diagnostic', icon: '🩺', roles: ['admin'] }
 ]
 

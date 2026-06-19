@@ -214,6 +214,71 @@ export async function pushFullSnapshot(state) {
   }
 }
 
+// =============================================================================
+// User Management (admin only)
+// =============================================================================
+
+export async function listUsers() {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi')
+  const { data, error } = await supabase.rpc('admin_users_list')
+  if (error) throw error
+  return (data || []).map((u) => ({
+    id: u.id,
+    email: u.email,
+    nama: u.nama,
+    role: u.role,
+    pengawasId: u.pengawas_id,
+    madrasahId: u.madrasah_id,
+    createdAt: u.created_at,
+    lastSignInAt: u.last_sign_in_at
+  }))
+}
+
+export async function createUser({ email, password, nama, role, pengawasId, madrasahId }) {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi')
+  // signUp ngga butuh ditelan oleh user baru — kita simpan session admin lalu restore setelahnya
+  const { data: adminSession } = await supabase.auth.getSession()
+  const adminAccess = adminSession?.session?.access_token
+  const adminRefresh = adminSession?.session?.refresh_token
+
+  const { data, error } = await supabase.auth.signUp({
+    email: String(email).trim(),
+    password,
+    options: {
+      data: {
+        nama: nama || '',
+        role: role || 'viewer',
+        pengawas_id: pengawasId || '',
+        madrasah_id: madrasahId || ''
+      }
+    }
+  })
+  if (error) throw error
+
+  if (adminAccess && adminRefresh) {
+    await supabase.auth.setSession({ access_token: adminAccess, refresh_token: adminRefresh })
+  }
+  return data?.user
+}
+
+export async function updateUserProfile({ id, nama, role, pengawasId, madrasahId }) {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi')
+  const { error } = await supabase.rpc('admin_update_profile', {
+    target_id: id,
+    new_nama: nama || null,
+    new_role: role,
+    new_pengawas_id: pengawasId || null,
+    new_madrasah_id: madrasahId || null
+  })
+  if (error) throw error
+}
+
+export async function deleteUser(id) {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi')
+  const { error } = await supabase.rpc('admin_delete_user', { target_id: id })
+  if (error) throw error
+}
+
 // Diagnostic: validasi auth + RLS dengan insert+delete real ke tabel madrasah
 export async function runDiagnostic() {
   if (!supabase) return { ok: false, step: 'init', message: 'Supabase belum dikonfigurasi' }

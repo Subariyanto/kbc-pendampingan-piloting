@@ -13,10 +13,13 @@
 --    - Tambahkan WITH CHECK eksplisit untuk semua INSERT/UPDATE/ALL policy
 -- =============================================================================
 
--- 1. Drop semua policy lama
+-- 1. Drop semua policy lama DAN policy baru (idempotent — boleh dijalankan berulang)
 drop policy if exists "profiles_self" on public.profiles;
+drop policy if exists "profiles_self_read" on public.profiles;
 drop policy if exists "profiles_admin_all" on public.profiles;
+drop policy if exists "profiles_admin_write" on public.profiles;
 drop policy if exists "settings_read_all" on public.settings;
+drop policy if exists "settings_read" on public.settings;
 drop policy if exists "settings_admin_write" on public.settings;
 drop policy if exists "pengawas_read" on public.pengawas;
 drop policy if exists "pengawas_admin_write" on public.pengawas;
