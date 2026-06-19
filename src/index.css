@@ -70,18 +70,15 @@
 
 /* Print rules */
 @media print {
-  /* Reset — semua dimulai tersembunyikan */
+  /* Sembunyikan semua via visibility (tetap pertahankan layout chain) */
   body * { visibility: hidden !important; }
-  /* Tampilkan hanya print-area + isinya */
+  /* Tampilkan kembali print-area & isinya */
   .print-area, .print-area * { visibility: visible !important; }
-  /* Force-hide elemen non-print walau berada dalam tree print-area */
-  .no-print, .no-print * { visibility: hidden !important; display: none !important; }
-  /* Posisikan print-area mengisi halaman */
+  /* Pindahkan print-area ke pojok kiri-atas, lebar penuh */
   .print-area {
     position: absolute !important;
-    inset: 0 !important;
-    top: 0 !important;
     left: 0 !important;
+    top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 16px !important;
@@ -89,10 +86,7 @@
     color: #000 !important;
     box-shadow: none !important;
   }
-  /* Modal overlay & wrapper jangan ikut dicetak */
-  .fixed { position: static !important; }
   body { background: #fff !important; }
-  /* Hilangkan halaman blank dari elemen kosong */
-  aside, nav, header, .topbar { display: none !important; }
-  @page { size: A4; margin: 12mm; }
+  /* Margin halaman; biarkan user pilih ukuran/orientasi sendiri di dialog cetak */
+  @page { margin: 12mm; }
 }
