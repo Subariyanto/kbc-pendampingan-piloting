@@ -81,12 +81,17 @@
     top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 16px !important;
+    padding: 0 !important;
     background: #fff !important;
     color: #000 !important;
     box-shadow: none !important;
   }
+  /* Reset wrapper modal yang nge-clamp tinggi/lebar */
+  .fixed { position: static !important; inset: auto !important; }
   body { background: #fff !important; }
-  /* Margin halaman; biarkan user pilih ukuran/orientasi sendiri di dialog cetak */
-  @page { margin: 12mm; }
+  /* Margin halaman lebih ringkas; biarkan user pilih orientasi/ukuran sendiri */
+  @page { margin: 10mm; }
+  /* Hindari elemen ke-cut di tengah */
+  table, tr, td, th { page-break-inside: avoid; }
+  h1, h2, h3, h4 { page-break-after: avoid; }
 }

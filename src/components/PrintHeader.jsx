@@ -1,7 +1,7 @@
 // Bagian header resmi untuk dokumen cetak
 export default function PrintHeader({ settings, judul = 'LAPORAN PENDAMPINGAN IMPLEMENTASI KBC' }) {
   return (
-    <div className="print-area pb-4 mb-4 border-b-2 border-navy-900">
+    <div className="pb-4 mb-4 border-b-2 border-navy-900">
       <div className="flex items-start gap-4">
         {settings.logoDataUrl ? (
           <img src={settings.logoDataUrl} alt="logo" className="w-20 h-20 object-contain" />
