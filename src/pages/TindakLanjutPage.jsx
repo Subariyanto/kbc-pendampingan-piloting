@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
 import { STATUS_TINDAK_LANJUT } from '../lib/constants.js'
 import { formatDate, isOverdue, searchMatch, STATUS_TINDAK_LANJUT_TONES, todayISO } from '../lib/utils.js'
+import { printPrintArea } from '../lib/printHelper.js'
 
 const EMPTY = { madrasahId: '', temuan: '', rekomendasi: '', pj: '', batas: todayISO(), status: 'Belum Dikerjakan', catatan: '' }
 
@@ -113,7 +114,7 @@ export default function TindakLanjutPage() {
 
       {print && (
         <Modal open onClose={() => setPrint(false)} title="Pratinjau Cetak — Tindak Lanjut" size="xl"
-          footer={<><button className="btn-ghost" onClick={() => setPrint(false)}>Tutup</button><button className="btn-primary" onClick={() => window.print()}>🖨 Cetak</button></>}>
+          footer={<><button className="btn-ghost" onClick={() => setPrint(false)}>Tutup</button><button className="btn-primary" onClick={() => printPrintArea()}>🖨 Cetak</button></>}>
           <div className="print-area bg-white p-6">
             <PrintHeader settings={state.settings} judul="DAFTAR REKOMENDASI & TINDAK LANJUT KBC" />
             <table className="table-clean">

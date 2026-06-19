@@ -13,6 +13,7 @@ import {
   downloadCSV, formatDate, formatDateLong, statusMadrasahByPct, STATUS_MADRASAH_TONES, STATUS_TINDAK_LANJUT_TONES, kategoriKBC
 } from '../lib/utils.js'
 import { rataRataMadrasah, rekapAspekGlobal, summarizeSkor } from '../lib/scoring.js'
+import { printPrintArea } from '../lib/printHelper.js'
 
 const LAPORAN_OPTIONS = [
   { value: 'rekap', label: 'Rekap Semua Madrasah' },
@@ -148,7 +149,7 @@ export default function LaporanPage() {
         actions={
           <>
             <button className="btn-ghost" onClick={exportCSV}>⬇ Ekspor CSV</button>
-            <button className="btn-primary" onClick={() => window.print()}>🖨 Cetak PDF</button>
+            <button className="btn-primary" onClick={() => printPrintArea({ title: 'Laporan KBC' })}>🖨 Cetak PDF</button>
           </>
         }
       />

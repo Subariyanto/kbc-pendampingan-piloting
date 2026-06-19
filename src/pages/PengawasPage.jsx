@@ -7,6 +7,7 @@ import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
 import { downloadCSV, formatDate, searchMatch } from '../lib/utils.js'
+import { printPrintArea } from '../lib/printHelper.js'
 
 const EMPTY = { nama: '', nip: '', pangkat: '', jabatan: '', wilayah: '', hp: '', email: '' }
 
@@ -130,7 +131,7 @@ export default function PengawasPage() {
 
       {print && (
         <Modal open onClose={() => setPrint(false)} title="Pratinjau Cetak — Pengawas" size="xl"
-          footer={<><button className="btn-ghost" onClick={() => setPrint(false)}>Tutup</button><button className="btn-primary" onClick={() => window.print()}>🖨 Cetak</button></>}>
+          footer={<><button className="btn-ghost" onClick={() => setPrint(false)}>Tutup</button><button className="btn-primary" onClick={() => printPrintArea()}>🖨 Cetak</button></>}>
           <div className="print-area bg-white p-6">
             <PrintHeader settings={state.settings} judul="DAFTAR PENGAWAS PENDAMPING PILOTING KBC" />
             <table className="table-clean">

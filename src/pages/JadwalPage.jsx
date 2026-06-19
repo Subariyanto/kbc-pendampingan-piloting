@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
 import { BENTUK_KEGIATAN, STATUS_JADWAL } from '../lib/constants.js'
 import { formatDate, formatDateLong, monthKey, monthLabel, searchMatch, STATUS_JADWAL_TONES, todayISO } from '../lib/utils.js'
+import { printPrintArea } from '../lib/printHelper.js'
 
 const EMPTY = {
   tanggal: todayISO(), madrasahId: '', pengawasId: '', bentuk: 'Sosialisasi',
@@ -163,7 +164,7 @@ export default function JadwalPage() {
 
       {print && (
         <Modal open onClose={() => setPrint(false)} title="Pratinjau Cetak — Jadwal" size="xl"
-          footer={<><button className="btn-ghost" onClick={() => setPrint(false)}>Tutup</button><button className="btn-primary" onClick={() => window.print()}>🖨 Cetak</button></>}
+          footer={<><button className="btn-ghost" onClick={() => setPrint(false)}>Tutup</button><button className="btn-primary" onClick={() => printPrintArea()}>🖨 Cetak</button></>}
         >
           <div className="print-area bg-white p-6">
             <PrintHeader settings={state.settings} judul="JADWAL PENDAMPINGAN MADRASAH PILOTING KBC" />

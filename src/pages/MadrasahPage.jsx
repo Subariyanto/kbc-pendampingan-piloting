@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
 import { JENJANG_OPTIONS, STATUS_NEGERI_SWASTA, STATUS_PILOTING } from '../lib/constants.js'
 import { downloadCSV, formatDate, searchMatch, statusMadrasahByPct, STATUS_MADRASAH_TONES, uid } from '../lib/utils.js'
+import { printPrintArea } from '../lib/printHelper.js'
 import { rataRataMadrasah } from '../lib/scoring.js'
 import { downloadMadrasahTemplate, parseMadrasahImport } from '../lib/excelMadrasah.js'
 
@@ -352,7 +353,10 @@ function Field({ label, required, children }) {
 
 function PrintMadrasah({ open, onClose, data, settings }) {
   if (!open) return null
-  const handlePrint = () => window.print()
+  const handlePrint = () => {
+    setPrint(true)
+    setTimeout(() => printPrintArea({ title: 'Daftar Madrasah' }), 200)
+  }
   return (
     <Modal open={open} onClose={onClose} title="Pratinjau Cetak — Daftar Madrasah" size="xl"
       footer={<><button className="btn-ghost" onClick={onClose}>Tutup</button><button className="btn-primary" onClick={handlePrint}>🖨 Cetak</button></>}

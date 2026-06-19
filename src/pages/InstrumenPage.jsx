@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
 import { SKOR_LABELS } from '../lib/constants.js'
 import { uid } from '../lib/utils.js'
+import { printPrintArea } from '../lib/printHelper.js'
 
 export default function InstrumenPage() {
   const { state, setInstrumen, resetInstrumen } = useData()
@@ -164,7 +165,7 @@ export default function InstrumenPage() {
 
       {print && (
         <Modal open onClose={() => setPrint(false)} title="Pratinjau Cetak — Instrumen" size="xl"
-          footer={<><button className="btn-ghost" onClick={() => setPrint(false)}>Tutup</button><button className="btn-primary" onClick={() => window.print()}>🖨 Cetak</button></>}
+          footer={<><button className="btn-ghost" onClick={() => setPrint(false)}>Tutup</button><button className="btn-primary" onClick={() => printPrintArea()}>🖨 Cetak</button></>}
         >
           <div className="print-area bg-white p-6">
             <PrintHeader settings={state.settings} judul="INSTRUMEN MONITORING IMPLEMENTASI KBC" />
