@@ -6,8 +6,8 @@ import { ROLE_LABELS, ROLES } from '../lib/constants.js'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: '🏠', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/madrasah', label: 'Madrasah Piloting', icon: '🏫', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/pengawas', label: 'Pengawas Pendamping', icon: '🧑‍🏫', roles: ['admin', 'pengawas', 'viewer'] },
+  { to: '/madrasah', label: 'Madrasah Piloting', icon: '🏫', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/jadwal', label: 'Jadwal Pendampingan', icon: '🗓️', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/instrumen', label: 'Instrumen KBC', icon: '📋', roles: ['admin', 'pengawas', 'viewer'] },
   { to: '/pendampingan', label: 'Hasil Pendampingan', icon: '📝', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
