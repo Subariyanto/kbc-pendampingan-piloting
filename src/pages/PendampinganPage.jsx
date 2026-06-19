@@ -8,15 +8,15 @@ import ProgressBar from '../components/ProgressBar.jsx'
 import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
-import { STATUS_TINDAK_LANJUT, SKOR_LABELS } from '../lib/constants.js'
+import { STATUS_TINDAK_LANJUT, SKOR_LABELS, BENTUK_KEGIATAN, MATERI_DEFAULTS } from '../lib/constants.js'
 import { formatDate, formatDateLong, searchMatch, STATUS_TINDAK_LANJUT_TONES, todayISO, kategoriKBC } from '../lib/utils.js'
 import { summarizeSkor } from '../lib/scoring.js'
 import { generateDraftPendampingan, generateFieldDraft } from '../lib/draftPendampingan.js'
 import { printPrintArea } from '../lib/printHelper.js'
 
 const EMPTY = {
-  tanggal: todayISO(), madrasahId: '', pengawasId: '', kegiatan: '',
-  temuanPositif: '', kendala: '', observasi: '', rekomendasi: '',
+  tanggal: todayISO(), madrasahId: '', pengawasId: '', bentuk: '',
+  kegiatan: '', temuanPositif: '', kendala: '', observasi: '', rekomendasi: '',
   rencanaTindakLanjut: '', batasTL: '', statusTL: 'Belum Dikerjakan',
   buktiLink: '', skor: {}
 }
@@ -200,7 +200,7 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
   }
   const fillField = (field) => {
     const madrasah = madrasahList.find((m) => m.id === form.madrasahId)
-    const draft = generateFieldDraft(field, { form, madrasah, instrumen })
+    const draft = generateFieldDraft(field, { form, madrasah, instrumen, MATERI_DEFAULTS })
     setForm((f) => ({ ...f, [field]: draft }))
   }
 
@@ -242,6 +242,28 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
             </select>
           </Field>
         </div>
+
+        <Field label="Bentuk Kegiatan">
+          <select
+            className="input"
+            value={form.bentuk}
+            onChange={(e) => {
+              const b = e.target.value
+              setForm((f) => {
+                const next = { ...f, bentuk: b }
+                // Auto-fill kegiatan dari template bentukan, tapi hanya jika kegiatan masih kosong atau dari template default
+                const materiVals = Object.values(MATERI_DEFAULTS)
+                if (!f.kegiatan || materiVals.includes(f.kegiatan)) {
+                  next.kegiatan = MATERI_DEFAULTS[b] || ''
+                }
+                return next
+              })
+            }}
+          >
+            <option value="">— Pilih bentuk —</option>
+            {BENTUK_KEGIATAN.map((b) => <option key={b}>{b}</option>)}
+          </select>
+        </Field>
 
         <FieldWithFill label="Kegiatan Pendampingan" required onFill={() => fillField('kegiatan')} disabled={!form.madrasahId}>
           <input className="input" value={form.kegiatan} onChange={(e) => upd('kegiatan', e.target.value)} required />

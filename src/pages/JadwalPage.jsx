@@ -7,13 +7,14 @@ import PrintHeader from '../components/PrintHeader.jsx'
 import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
-import { BENTUK_KEGIATAN, STATUS_JADWAL } from '../lib/constants.js'
+import { BENTUK_KEGIATAN, STATUS_JADWAL, MATERI_DEFAULTS, CATATAN_DEFAULTS } from '../lib/constants.js'
 import { formatDate, formatDateLong, monthKey, monthLabel, searchMatch, STATUS_JADWAL_TONES, todayISO } from '../lib/utils.js'
 import { printPrintArea } from '../lib/printHelper.js'
 
 const EMPTY = {
   tanggal: todayISO(), madrasahId: '', pengawasId: '', bentuk: 'Sosialisasi',
-  materi: '', tempat: '', status: 'Terjadwal', catatan: ''
+  materi: MATERI_DEFAULTS['Sosialisasi'] || '', tempat: '', status: 'Terjadwal',
+  catatan: CATATAN_DEFAULTS['Sosialisasi'] || ''
 }
 
 export default function JadwalPage() {
@@ -192,11 +193,41 @@ function FormJadwal({ value, onSave, madrasahList, pengawasList }) {
   const [form, setForm] = useState(value)
   const upd = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   const submit = (e) => { e.preventDefault(); onSave(form) }
+
+  // Auto-fill Materi & Catatan saat ganti Bentuk Kegiatan,
+  // tapi hanya jika user belum mengubah manual (masih kosong atau masih sama dengan default bentuk lain).
+  const onChangeBentuk = (b) => {
+    setForm((f) => {
+      const materiDefaults = Object.values(MATERI_DEFAULTS)
+      const catatanDefaults = Object.values(CATATAN_DEFAULTS)
+      const next = { ...f, bentuk: b }
+      if (!f.materi || materiDefaults.includes(f.materi)) {
+        next.materi = MATERI_DEFAULTS[b] || ''
+      }
+      if (!f.catatan || catatanDefaults.includes(f.catatan)) {
+        next.catatan = CATATAN_DEFAULTS[b] || ''
+      }
+      return next
+    })
+  }
+
+  const fillDefaults = () => {
+    setForm((f) => {
+      const newMateri = MATERI_DEFAULTS[f.bentuk]
+      const newCatatan = CATATAN_DEFAULTS[f.bentuk]
+      return {
+        ...f,
+        materi: newMateri !== undefined ? newMateri : f.materi,
+        catatan: newCatatan !== undefined ? newCatatan : f.catatan
+      }
+    })
+  }
+
   return (
     <form id="form-jadwal" onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <Field label="Tanggal" required><input className="input" type="date" value={form.tanggal} onChange={(e) => upd('tanggal', e.target.value)} required /></Field>
       <Field label="Bentuk Kegiatan">
-        <select className="input" value={form.bentuk} onChange={(e) => upd('bentuk', e.target.value)}>
+        <select className="input" value={form.bentuk} onChange={(e) => onChangeBentuk(e.target.value)}>
           {BENTUK_KEGIATAN.map((b) => <option key={b}>{b}</option>)}
         </select>
       </Field>
@@ -219,12 +250,17 @@ function FormJadwal({ value, onSave, madrasahList, pengawasList }) {
       </Field>
       <Field label="Tempat"><input className="input" value={form.tempat} onChange={(e) => upd('tempat', e.target.value)} /></Field>
       <div className="sm:col-span-2">
-        <label className="label">Materi Pendampingan</label>
-        <input className="input" value={form.materi} onChange={(e) => upd('materi', e.target.value)} />
+        <div className="flex items-center justify-between">
+          <label className="label">Materi Pendampingan</label>
+          <button type="button" className="text-xs text-toska-700 hover:underline" onClick={fillDefaults}>
+            ✨ Isi otomatis sesuai bentuk
+          </button>
+        </div>
+        <textarea className="input" rows={2} value={form.materi} onChange={(e) => upd('materi', e.target.value)} placeholder="Materi/topik pendampingan…" />
       </div>
       <div className="sm:col-span-2">
         <label className="label">Catatan</label>
-        <textarea className="input" rows={3} value={form.catatan} onChange={(e) => upd('catatan', e.target.value)} />
+        <textarea className="input" rows={3} value={form.catatan} onChange={(e) => upd('catatan', e.target.value)} placeholder="Persiapan, sasaran, output yang diharapkan…" />
       </div>
     </form>
   )

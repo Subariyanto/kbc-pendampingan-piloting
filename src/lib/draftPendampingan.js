@@ -126,9 +126,15 @@ export function generateDraftPendampingan({ form, madrasah, instrumen }) {
 }
 
 // Untuk per-field auto-fill (overwrite) — tetap regenerate berdasarkan skor terbaru
-export function generateFieldDraft(field, { form, madrasah, instrumen }) {
+// untuk 'kegiatan', pakai template dari MATERI_DEFAULTS berdasarkan bentuk yang dipilih user
+export function generateFieldDraft(field, { form, madrasah, instrumen, MATERI_DEFAULTS: materiDef }) {
   switch (field) {
-    case 'kegiatan': return pickKegiatan(summarizeSkor(form?.skor, instrumen).pct)
+    case 'kegiatan':
+      // Kalau bentuk diset & ada template → pakai template. Fallback ke skor.
+      if (form?.bentuk && materiDef?.[form.bentuk]) {
+        return materiDef[form.bentuk]
+      }
+      return pickKegiatan(summarizeSkor(form?.skor, instrumen).pct)
     case 'temuanPositif': return generateTemuanPositif(madrasah, instrumen, form?.skor)
     case 'kendala': return generateKendala(madrasah, instrumen, form?.skor)
     case 'observasi': return generateObservasi(madrasah, instrumen, form?.skor)

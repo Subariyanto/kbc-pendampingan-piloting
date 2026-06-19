@@ -31,6 +31,27 @@ export const BENTUK_KEGIATAN = [
 
 export const STATUS_JADWAL = ['Terjadwal', 'Terlaksana', 'Ditunda', 'Selesai']
 
+// Default isian otomatis untuk Form Jadwal (per Bentuk Kegiatan)
+export const MATERI_DEFAULTS = {
+  Sosialisasi: 'Sosialisasi Program Pendampingan Implementasi Kurikulum Berbasis Cinta (KBC) — pengenalan konsep Panca Cinta dan tahapan implementasi di madrasah piloting.',
+  Bimtek: 'Bimbingan Teknis Implementasi KBC — penguatan kapasitas kepala madrasah dan guru dalam perencanaan serta pelaksanaan pembelajaran berbasis cinta.',
+  Observasi: 'Observasi pelaksanaan pembelajaran berbasis cinta dan budaya madrasah — pengamatan langsung praktik di kelas, lingkungan, dan kegiatan pembiasaan.',
+  Coaching: 'Coaching dan pendampingan implementasi KBC — sesi pendampingan personal untuk kepala madrasah dan guru dalam pengembangan budaya cinta.',
+  Refleksi: 'Refleksi pelaksanaan pendampingan KBC — diskusi capaian, kendala, dan rekomendasi tindak lanjut bersama tim madrasah piloting.',
+  Monitoring: 'Monitoring kemajuan implementasi KBC — pemantauan progres pelaksanaan program piloting dan tindak lanjut periode sebelumnya.',
+  Evaluasi: 'Evaluasi akhir implementasi KBC — penilaian capaian pelaksanaan Kurikulum Berbasis Cinta dan penyusunan rekomendasi keberlanjutan.'
+}
+
+export const CATATAN_DEFAULTS = {
+  Sosialisasi: 'Persiapan: surat tugas, daftar hadir, bahan paparan KBC. Sasaran: kepala madrasah, wakil, dan perwakilan guru. Output: kesepahaman bersama dan komitmen implementasi KBC.',
+  Bimtek: 'Persiapan: modul bimtek, contoh modul ajar berbasis cinta, instrumen praktik. Sasaran: guru dan tim KBC madrasah. Output: produk perencanaan pembelajaran KBC.',
+  Observasi: 'Persiapan: instrumen observasi, lembar catatan, dokumentasi foto/video. Sasaran: minimal 2 kelas dan lingkungan madrasah. Output: catatan praktik baik dan rekomendasi perbaikan.',
+  Coaching: 'Persiapan: catatan capaian sebelumnya, target sesi, rencana tindak lanjut. Sasaran: kepala madrasah/guru terpilih. Output: kesepakatan langkah perbaikan dan jadwal sesi berikutnya.',
+  Refleksi: 'Persiapan: hasil observasi/monitoring, instrumen refleksi, ringkasan capaian. Sasaran: tim KBC madrasah. Output: catatan refleksi dan rencana perbaikan.',
+  Monitoring: 'Persiapan: checklist monitoring, laporan progres periode sebelumnya, eviden. Sasaran: kepala madrasah dan tim KBC. Output: status capaian indikator dan daftar tindak lanjut.',
+  Evaluasi: 'Persiapan: instrumen evaluasi lengkap, eviden, laporan akhir. Sasaran: seluruh tim KBC madrasah. Output: laporan evaluasi dan rekomendasi keberlanjutan program KBC.'
+}
+
 export const STATUS_TINDAK_LANJUT = [
   'Belum Dikerjakan',
   'Proses',

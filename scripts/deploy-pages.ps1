@@ -1,9 +1,24 @@
 # Skrip deploy ke GitHub Pages branch gh-pages.
 # Jalankan dari root project: pwsh ./scripts/deploy-pages.ps1
+# Auto-load Supabase env dari secrets file kalau tidak diset via param atau env.
 param(
   [string]$SupabaseUrl = $env:VITE_SUPABASE_URL,
   [string]$SupabaseAnon = $env:VITE_SUPABASE_ANON_KEY
 )
+
+$secretsFile = Join-Path $env:USERPROFILE ".openclaw\secrets\kbc-supabase.env"
+if ($secretsFile -and (Test-Path $secretsFile)) {
+  Get-Content $secretsFile | ForEach-Object {
+    if ($_ -match '^([^=]+)=(.*)$') {
+      $k, $v = $matches[1], $matches[2]
+      if (-not (Get-Item -Path "env:$k" -ErrorAction SilentlyContinue)) {
+        Set-Item -Path "env:$k" -Value $v
+      }
+    }
+  }
+  if (-not $SupabaseUrl)  { $SupabaseUrl  = $env:VITE_SUPABASE_URL  }
+  if (-not $SupabaseAnon) { $SupabaseAnon = $env:VITE_SUPABASE_ANON_KEY }
+}
 
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path "$PSScriptRoot/.."
