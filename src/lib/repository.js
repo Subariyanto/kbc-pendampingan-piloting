@@ -213,3 +213,40 @@ export async function pushFullSnapshot(state) {
     if (error) throw error
   }
 }
+
+// Diagnostic: validasi auth + RLS dengan insert+delete real ke tabel madrasah
+export async function runDiagnostic() {
+  if (!supabase) return { ok: false, step: 'init', message: 'Supabase belum dikonfigurasi' }
+  const log = []
+  try {
+    const { data: userData, error: ue } = await supabase.auth.getUser()
+    if (ue || !userData?.user) return { ok: false, step: 'auth', message: ue?.message || 'Tidak ada session aktif', log }
+    log.push({ step: 'auth', user: userData.user.email })
+
+    const { data: prof, error: pe } = await supabase.from('profiles').select('*').eq('id', userData.user.id).maybeSingle()
+    if (pe) return { ok: false, step: 'profile_select', message: pe.message, log }
+    if (!prof) return { ok: false, step: 'profile_missing', message: 'Profile tidak ditemukan untuk user ini', log }
+    log.push({ step: 'profile', role: prof.role, nama: prof.nama })
+
+    const { count: mc, error: me } = await supabase.from('madrasah').select('id', { count: 'exact', head: true })
+    if (me) return { ok: false, step: 'madrasah_select', message: me.message, log }
+    log.push({ step: 'madrasah_select', count: mc })
+
+    const testNama = `__diagnostic_${Date.now()}`
+    const { data: inserted, error: ie } = await supabase.from('madrasah')
+      .insert({ nama: testNama, jenjang: 'MI', status_ns: 'Negeri' })
+      .select()
+      .single()
+    if (ie) return { ok: false, step: 'madrasah_insert', message: ie.message, details: ie.details, hint: ie.hint, log }
+    log.push({ step: 'madrasah_insert', id: inserted.id })
+
+    const { error: de } = await supabase.from('madrasah').delete().eq('id', inserted.id)
+    if (de) log.push({ step: 'cleanup_failed', message: de.message })
+    else log.push({ step: 'cleanup', ok: true })
+
+    return { ok: true, step: 'done', message: 'Semua test pass', log }
+  } catch (err) {
+    return { ok: false, step: 'exception', message: err.message, log }
+  }
+}
+
