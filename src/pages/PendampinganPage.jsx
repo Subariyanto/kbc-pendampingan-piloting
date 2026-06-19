@@ -11,6 +11,7 @@ import { useScope } from '../lib/useScope.js'
 import { STATUS_TINDAK_LANJUT, SKOR_LABELS } from '../lib/constants.js'
 import { formatDate, formatDateLong, searchMatch, STATUS_TINDAK_LANJUT_TONES, todayISO, kategoriKBC } from '../lib/utils.js'
 import { summarizeSkor } from '../lib/scoring.js'
+import { generateDraftPendampingan, generateFieldDraft } from '../lib/draftPendampingan.js'
 
 const EMPTY = {
   tanggal: todayISO(), madrasahId: '', pengawasId: '', kegiatan: '',
@@ -191,6 +192,17 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
   const ringkas = summarizeSkor(form.skor, instrumen)
   const submit = (e) => { e.preventDefault(); onSave(form) }
 
+  const fillAll = () => {
+    const madrasah = madrasahList.find((m) => m.id === form.madrasahId)
+    const draft = generateDraftPendampingan({ form, madrasah, instrumen })
+    setForm((f) => ({ ...f, ...draft }))
+  }
+  const fillField = (field) => {
+    const madrasah = madrasahList.find((m) => m.id === form.madrasahId)
+    const draft = generateFieldDraft(field, { form, madrasah, instrumen })
+    setForm((f) => ({ ...f, [field]: draft }))
+  }
+
   return (
     <Modal
       open
@@ -205,6 +217,15 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
       }
     >
       <form id="form-pendampingan" onSubmit={submit} className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-toska-50 border border-toska-200 rounded-lg px-4 py-2">
+          <p className="text-xs text-toska-900">
+            💡 <strong>Tip:</strong> Klik <em>Isi Otomatis Semua</em> untuk dapat draft awal berdasarkan skor instrumen yang sudah Bapak isi. Edit/sesuaikan setelahnya.
+          </p>
+          <button type="button" className="btn-toska btn-sm" onClick={fillAll} disabled={!form.madrasahId}>
+            ✨ Isi Otomatis Semua
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="Tanggal" required><input type="date" className="input" value={form.tanggal} onChange={(e) => upd('tanggal', e.target.value)} required /></Field>
           <Field label="Madrasah" required>
@@ -221,16 +242,26 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
           </Field>
         </div>
 
-        <Field label="Kegiatan Pendampingan" required>
+        <FieldWithFill label="Kegiatan Pendampingan" required onFill={() => fillField('kegiatan')} disabled={!form.madrasahId}>
           <input className="input" value={form.kegiatan} onChange={(e) => upd('kegiatan', e.target.value)} required />
-        </Field>
+        </FieldWithFill>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Temuan Positif"><textarea className="input" rows={3} value={form.temuanPositif} onChange={(e) => upd('temuanPositif', e.target.value)} /></Field>
-          <Field label="Permasalahan / Kendala"><textarea className="input" rows={3} value={form.kendala} onChange={(e) => upd('kendala', e.target.value)} /></Field>
-          <Field label="Hasil Observasi"><textarea className="input" rows={3} value={form.observasi} onChange={(e) => upd('observasi', e.target.value)} /></Field>
-          <Field label="Rekomendasi Pengawas"><textarea className="input" rows={3} value={form.rekomendasi} onChange={(e) => upd('rekomendasi', e.target.value)} /></Field>
-          <Field label="Rencana Tindak Lanjut Madrasah"><textarea className="input" rows={3} value={form.rencanaTindakLanjut} onChange={(e) => upd('rencanaTindakLanjut', e.target.value)} /></Field>
+          <FieldWithFill label="Temuan Positif" onFill={() => fillField('temuanPositif')} disabled={!form.madrasahId}>
+            <textarea className="input" rows={4} value={form.temuanPositif} onChange={(e) => upd('temuanPositif', e.target.value)} />
+          </FieldWithFill>
+          <FieldWithFill label="Permasalahan / Kendala" onFill={() => fillField('kendala')} disabled={!form.madrasahId}>
+            <textarea className="input" rows={4} value={form.kendala} onChange={(e) => upd('kendala', e.target.value)} />
+          </FieldWithFill>
+          <FieldWithFill label="Hasil Observasi" onFill={() => fillField('observasi')} disabled={!form.madrasahId}>
+            <textarea className="input" rows={4} value={form.observasi} onChange={(e) => upd('observasi', e.target.value)} />
+          </FieldWithFill>
+          <FieldWithFill label="Rekomendasi Pengawas" onFill={() => fillField('rekomendasi')} disabled={!form.madrasahId}>
+            <textarea className="input" rows={4} value={form.rekomendasi} onChange={(e) => upd('rekomendasi', e.target.value)} />
+          </FieldWithFill>
+          <FieldWithFill label="Rencana Tindak Lanjut Madrasah" onFill={() => fillField('rencanaTindakLanjut')} disabled={!form.madrasahId}>
+            <textarea className="input" rows={4} value={form.rencanaTindakLanjut} onChange={(e) => upd('rencanaTindakLanjut', e.target.value)} />
+          </FieldWithFill>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Batas Waktu TL"><input className="input" type="date" value={form.batasTL} onChange={(e) => upd('batasTL', e.target.value)} /></Field>
             <Field label="Status Tindak Lanjut">
@@ -374,4 +405,24 @@ function Section({ title, content }) {
 
 function Field({ label, required, children }) {
   return <div><label className="label">{label}{required && <span className="text-rose-500"> *</span>}</label>{children}</div>
+}
+
+function FieldWithFill({ label, required, onFill, disabled, children }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="label !mb-0">{label}{required && <span className="text-rose-500"> *</span>}</label>
+        <button
+          type="button"
+          className="text-[10px] uppercase tracking-wide text-toska-700 hover:text-toska-900 disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={onFill}
+          disabled={disabled}
+          title={disabled ? 'Pilih madrasah dulu' : 'Isi otomatis berdasarkan skor instrumen'}
+        >
+          ✨ Isi otomatis
+        </button>
+      </div>
+      {children}
+    </div>
+  )
 }
