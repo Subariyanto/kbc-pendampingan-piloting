@@ -98,10 +98,14 @@ export default function AppLayout({ children }) {
 
 function Brand({ settings }) {
   return (
-    <div className="px-5 py-5 border-b border-white/10">
+    <div className="px-5 py-5 border-b border-white/10 text-center">
       <p className="text-[11px] uppercase tracking-wider text-toska-200">Pendampingan Piloting</p>
       <p className="text-sm font-serif font-semibold leading-tight whitespace-nowrap">Kurikulum Berbasis Cinta</p>
       <p className="text-[11px] text-slate-300 mt-0.5">Pokjawas Kab. Jember</p>
+      <p className="text-[10px] text-slate-400 mt-2 leading-tight">
+        Aplikasi ini dibuat oleh:<br />
+        <span className="text-slate-200">Subariyanto, S.Pd, M.Pd.I.</span>
+      </p>
     </div>
   )
 }
