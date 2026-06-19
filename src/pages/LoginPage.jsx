@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useData } from '../context/DataContext.jsx'
+import { SUPABASE_ENABLED } from '../lib/supabase.js'
 
 const DEMO = [
   { role: 'Admin', user: 'admin', pass: 'admin123' },
@@ -21,16 +22,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    const res = login(username.trim(), password)
+    const res = await login(username.trim(), password)
     setLoading(false)
     if (!res.ok) {
       toast.error(res.error)
       return
     }
-    toast.success(`Selamat datang, ${res.user.nama}`)
+    toast.success(`Selamat datang${res.user?.nama ? ', ' + res.user.nama : ''}`)
     navigate('/', { replace: true })
   }
 
@@ -93,13 +94,14 @@ export default function LoginPage() {
 
           <form onSubmit={submit} className="space-y-4">
             <div>
-              <label className="label">Username</label>
+              <label className="label">{SUPABASE_ENABLED ? 'Email' : 'Username'}</label>
               <input
                 className="input"
+                type={SUPABASE_ENABLED ? 'email' : 'text'}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                placeholder="contoh: admin"
+                autoComplete={SUPABASE_ENABLED ? 'email' : 'username'}
+                placeholder={SUPABASE_ENABLED ? 'nama@email.com' : 'contoh: admin'}
                 required
               />
             </div>
@@ -120,22 +122,29 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-7">
-            <p className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-2">Akun Demo</p>
-            <div className="grid grid-cols-2 gap-2">
-              {DEMO.map((d) => (
-                <button
-                  key={d.user}
-                  type="button"
-                  onClick={() => fillDemo(d.user, d.pass)}
-                  className="text-left rounded-lg border border-slate-200 hover:border-toska-400 hover:bg-toska-50 px-3 py-2 transition"
-                >
-                  <p className="text-xs text-slate-500">{d.role}</p>
-                  <p className="text-sm font-mono text-navy-900">{d.user} / {d.pass}</p>
-                </button>
-              ))}
+          {!SUPABASE_ENABLED && (
+            <div className="mt-7">
+              <p className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-2">Akun Demo</p>
+              <div className="grid grid-cols-2 gap-2">
+                {DEMO.map((d) => (
+                  <button
+                    key={d.user}
+                    type="button"
+                    onClick={() => fillDemo(d.user, d.pass)}
+                    className="text-left rounded-lg border border-slate-200 hover:border-toska-400 hover:bg-toska-50 px-3 py-2 transition"
+                  >
+                    <p className="text-xs text-slate-500">{d.role}</p>
+                    <p className="text-sm font-mono text-navy-900">{d.user} / {d.pass}</p>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+          {SUPABASE_ENABLED && (
+            <p className="text-xs text-slate-500 mt-6">
+              Akun terhubung ke Supabase Auth. Jika belum punya akun, hubungi admin Pokjawas untuk diundang.
+            </p>
+          )}
         </div>
       </div>
     </div>
