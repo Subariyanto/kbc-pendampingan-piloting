@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { STORAGE_KEY, uid } from '../lib/utils.js'
 import { buildSeedData } from '../lib/seed.js'
 import { buildDefaultInstrumen } from '../lib/constants.js'
-import { SUPABASE_ENABLED } from '../lib/supabase.js'
+import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
 import * as repo from '../lib/repository.js'
 
 const DataContext = createContext(null)
@@ -32,32 +32,54 @@ export function DataProvider({ children }) {
   const [loading, setLoading] = useState(SUPABASE_ENABLED)
   const [remoteError, setRemoteError] = useState(null)
 
-  // Kalau Supabase aktif, refresh state dari Supabase saat mount.
+  // Kalau Supabase aktif, refresh state dari Supabase saat session berubah (login/logout/initial).
   useEffect(() => {
     if (!SUPABASE_ENABLED) return
-    let cancel = false
-    const run = async () => {
+    let cancelled = false
+
+    const fetchSnapshot = async (session) => {
+      if (!session) {
+        // Tidak login: kosongkan data sensitif, biarkan settings & instrumen default
+        if (!cancelled) setLoading(false)
+        return
+      }
       try {
-        setLoading(true)
+        if (!cancelled) setLoading(true)
         const snapshot = await repo.loadSnapshot()
-        if (cancel) return
+        if (cancelled) return
         setState((prev) => ({
           ...prev,
           ...snapshot,
           settings: snapshot.settings ?? prev.settings,
           instrumen: snapshot.instrumen?.length ? snapshot.instrumen : prev.instrumen,
-          users: prev.users // user dikelola Supabase Auth, biarkan
+          users: prev.users
         }))
         setRemoteError(null)
       } catch (err) {
         console.error('Gagal load Supabase snapshot:', err)
-        setRemoteError(err.message || String(err))
+        if (!cancelled) setRemoteError(err.message || String(err))
       } finally {
-        if (!cancel) setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
-    run()
-    return () => { cancel = true }
+
+    // Initial load: kalau ada session tersimpan, fetch langsung
+    supabase.auth.getSession().then(({ data }) => fetchSnapshot(data?.session))
+
+    // Re-fetch tiap auth state change (login / logout / token refresh)
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        fetchSnapshot(session)
+      } else if (event === 'SIGNED_OUT') {
+        setRemoteError(null)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      sub?.subscription?.unsubscribe?.()
+    }
   }, [])
 
   useEffect(() => {
@@ -65,9 +87,48 @@ export function DataProvider({ children }) {
   }, [state])
 
   const upsertCollection = useCallback(async (key, item) => {
+    if (SUPABASE_ENABLED) {
+      // Mode Supabase: kirim ke server dulu, baru update local pakai data dari server.
+      // ID dibiarkan kosong saat insert agar Postgres yang generate UUID.
+      const isUpdate = !!item.id
+      const tempId = isUpdate ? item.id : `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      // Optimistic add (gunakan tempId saat insert)
+      setState((prev) => {
+        const list = prev[key] ?? []
+        if (isUpdate && list.some((x) => x.id === item.id)) {
+          return { ...prev, [key]: list.map((x) => (x.id === item.id ? { ...x, ...item } : x)) }
+        }
+        return { ...prev, [key]: [...list, { ...item, id: tempId, _pending: true }] }
+      })
+      try {
+        const remote = await repo.upsertItem(key, isUpdate ? item : { ...item, id: undefined })
+        if (remote?.id) {
+          // Replace tempId / set id real dari server
+          setState((prev) => ({
+            ...prev,
+            [key]: (prev[key] || []).map((x) =>
+              (x.id === tempId || x.id === remote.id || x.id === item.id)
+                ? { ...x, ...item, id: remote.id, _pending: false }
+                : x
+            )
+          }))
+        }
+        setRemoteError(null)
+      } catch (err) {
+        console.error('Supabase upsert error:', err)
+        // Rollback insert kalau gagal
+        if (!isUpdate) {
+          setState((prev) => ({ ...prev, [key]: (prev[key] || []).filter((x) => x.id !== tempId) }))
+        }
+        setRemoteError(err.message)
+        throw err
+      }
+      return
+    }
+
+    // Mode lokal: pakai uid() lokal
     const id = item.id ?? uid(key)
     const next = { ...item, id }
-    // optimistic local
     setState((prev) => {
       const list = prev[key] ?? []
       if (list.some((x) => x.id === id)) {
@@ -75,19 +136,6 @@ export function DataProvider({ children }) {
       }
       return { ...prev, [key]: [...list, next] }
     })
-    if (SUPABASE_ENABLED) {
-      try {
-        const remote = await repo.upsertItem(key, next)
-        // sync id (kalau tadi pakai uid sementara, server bisa balikin row dengan id berbeda di insert pertama)
-        setState((prev) => ({
-          ...prev,
-          [key]: prev[key].map((x) => (x.id === id ? { ...x, id: remote.id ?? id } : x))
-        }))
-      } catch (err) {
-        console.error('Supabase upsert error:', err)
-        setRemoteError(err.message)
-      }
-    }
   }, [])
 
   const removeFromCollection = useCallback(async (key, id) => {

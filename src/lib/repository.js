@@ -127,10 +127,16 @@ export async function upsertItem(collection, item) {
   const cfg = collectionConfig[collection]
   if (!cfg) throw new Error(`Unknown collection ${collection}`)
   const payload = cfg.toDb(item)
+  // Hapus id kalau bukan UUID valid (mode insert pakai uid lokal)
+  if (payload.id && !isUuid(payload.id)) delete payload.id
   if (!payload.id) delete payload.id
   const { data, error } = await supabase.from(cfg.table).upsert(payload).select().single()
   if (error) throw error
   return data
+}
+
+function isUuid(s) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || ''))
 }
 
 export async function deleteItem(collection, id) {

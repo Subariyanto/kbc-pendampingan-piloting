@@ -47,14 +47,18 @@ export default function MadrasahPage() {
 
   const kecamatanOpts = useMemo(() => Array.from(new Set(state.madrasah.map((m) => m.kecamatan).filter(Boolean))), [state.madrasah])
 
-  const onSave = (form) => {
+  const onSave = async (form) => {
     if (!form.nama) {
       toast.error('Nama madrasah wajib diisi')
       return
     }
-    addOrUpdate('madrasah', form)
-    toast.success(form.id ? 'Data madrasah diperbarui' : 'Madrasah baru ditambahkan')
-    setEditing(null)
+    try {
+      await addOrUpdate('madrasah', form)
+      toast.success(form.id ? 'Data madrasah diperbarui' : 'Madrasah baru ditambahkan')
+      setEditing(null)
+    } catch (err) {
+      toast.error('Gagal simpan: ' + (err?.message || 'unknown'))
+    }
   }
 
   const onRemove = (item) => {
