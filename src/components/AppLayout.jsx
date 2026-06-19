@@ -98,19 +98,10 @@ export default function AppLayout({ children }) {
 
 function Brand({ settings }) {
   return (
-    <div className="px-5 py-5 border-b border-white/10 flex items-center gap-3">
-      {settings.logoDataUrl ? (
-        <img src={settings.logoDataUrl} alt="logo" className="w-11 h-11 rounded-lg bg-white object-contain" />
-      ) : (
-        <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-toska-500 to-navy-700 flex items-center justify-center text-white font-bold">
-          KBC
-        </div>
-      )}
-      <div className="leading-tight">
-        <p className="text-[11px] uppercase tracking-wider text-toska-200">Pendampingan Piloting</p>
-        <p className="text-base font-serif font-semibold">Kurikulum Berbasis Cinta</p>
-        <p className="text-[11px] text-slate-300 mt-0.5">{settings.subInstansi}</p>
-      </div>
+    <div className="px-5 py-5 border-b border-white/10">
+      <p className="text-[11px] uppercase tracking-wider text-toska-200">Pendampingan Piloting</p>
+      <p className="text-sm font-serif font-semibold leading-tight whitespace-nowrap">Kurikulum Berbasis Cinta</p>
+      <p className="text-[11px] text-slate-300 mt-0.5">Pokjawas Kab. Jember</p>
     </div>
   )
 }
