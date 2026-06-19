@@ -12,6 +12,7 @@ import { STATUS_TINDAK_LANJUT, SKOR_LABELS } from '../lib/constants.js'
 import { formatDate, formatDateLong, searchMatch, STATUS_TINDAK_LANJUT_TONES, todayISO, kategoriKBC } from '../lib/utils.js'
 import { summarizeSkor } from '../lib/scoring.js'
 import { generateDraftPendampingan, generateFieldDraft } from '../lib/draftPendampingan.js'
+import { printPrintArea } from '../lib/printHelper.js'
 
 const EMPTY = {
   tanggal: todayISO(), madrasahId: '', pengawasId: '', kegiatan: '',
@@ -331,7 +332,7 @@ function PrintModal({ item, mode, settings, instrumen, madrasah, pengawas, onClo
   return (
     <Modal open onClose={onClose} size="xl"
       title={`Pratinjau Cetak — ${isBA ? 'Berita Acara' : 'Laporan'} Pendampingan`}
-      footer={<><button className="btn-ghost" onClick={onClose}>Tutup</button><button className="btn-primary" onClick={() => window.print()}>🖨 Cetak</button></>}>
+      footer={<><button className="btn-ghost" onClick={onClose}>Tutup</button><button className="btn-primary" onClick={() => printPrintArea({ title: isBA ? 'Berita Acara Pendampingan' : 'Laporan Hasil Pendampingan' })}>🖨 Cetak</button></>}>
       <div className="print-area bg-white p-6 text-sm">
         <PrintHeader settings={settings} judul={isBA ? 'BERITA ACARA PENDAMPINGAN IMPLEMENTASI KBC' : 'LAPORAN HASIL PENDAMPINGAN IMPLEMENTASI KBC'} />
         <table className="w-full mb-4">

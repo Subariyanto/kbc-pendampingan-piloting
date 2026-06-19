@@ -70,28 +70,45 @@
 
 /* Print rules */
 @media print {
-  /* Sembunyikan semua via visibility (tetap pertahankan layout chain) */
-  body * { visibility: hidden !important; }
-  /* Tampilkan kembali print-area & isinya */
-  .print-area, .print-area * { visibility: visible !important; }
-  /* Pindahkan print-area ke pojok kiri-atas, lebar penuh */
-  .print-area {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+  /* Reset background & color global */
+  body { background: #fff !important; color: #000 !important; margin: 0 !important; padding: 0 !important; }
+
+  /* Sembunyikan elemen UI yang bukan dokumen */
+  aside, nav, header, .topbar, .no-print { display: none !important; }
+  /* Tombol di mana pun jangan ikut tercetak (kecuali tombol di dalam print-area, jarang dipakai) */
+  button { display: none !important; }
+
+  /* Hilangkan overlay modal & framing-nya supaya konten naik ke aliran normal */
+  .fixed { position: static !important; inset: auto !important; padding: 0 !important; background: transparent !important; }
+  .fixed > div[aria-hidden="true"] { display: none !important; } /* backdrop */
+  /* Modal box: hilangkan max-height/overflow agar paginasi mengalir natural */
+  .fixed > .relative {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-height: none !important;
     width: 100% !important;
+    max-width: none !important;
+  }
+  .fixed > .relative > div:first-child { display: none !important; } /* modal header bar */
+  .fixed > .relative > div { overflow: visible !important; max-height: none !important; }
+
+  /* Print-area: full width, no absolute positioning (biar paginate normal) */
+  .print-area {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
     color: #000 !important;
     box-shadow: none !important;
+    border: none !important;
   }
-  /* Reset wrapper modal yang nge-clamp tinggi/lebar */
-  .fixed { position: static !important; inset: auto !important; }
-  body { background: #fff !important; }
-  /* Margin halaman lebih ringkas; biarkan user pilih orientasi/ukuran sendiri */
-  @page { margin: 10mm; }
-  /* Hindari elemen ke-cut di tengah */
+
+  /* Cegah cut di tengah */
   table, tr, td, th { page-break-inside: avoid; }
   h1, h2, h3, h4 { page-break-after: avoid; }
+
+  /* Margin halaman ringkas; orientasi/ukuran ikut pilihan user di dialog cetak */
+  @page { margin: 10mm; }
 }
