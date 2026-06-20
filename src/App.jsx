@@ -18,8 +18,10 @@ import DiagnosticPage from './pages/DiagnosticPage.jsx'
 import PenggunaPage from './pages/PenggunaPage.jsx'
 import LisensiPage from './pages/LisensiPage.jsx'
 import { getStoredLicense, saveLicense } from './lib/codes.js'
+import { SUPABASE_ENABLED, supabase } from './lib/supabase.js'
 
 // --- Gate: cek lisensi dari localStorage, redirect ke halaman aktivasi kalau belum ---
+// Admin (mode Supabase) auto-bypass aktivasi
 function ActivationGate({ children }) {
   const [ok, setOk] = useState(false)
   const [check, setCheck] = useState(false)
@@ -27,7 +29,25 @@ function ActivationGate({ children }) {
   useEffect(() => {
     const lic = getStoredLicense()
     if (lic) { setOk(true); setCheck(true); return }
-    setCheck(true)
+
+    // Admin bypass: kalau ada session Supabase dan role admin, auto-aktivasi
+    if (SUPABASE_ENABLED) {
+      supabase.auth.getSession().then(async ({ data }) => {
+        if (data?.session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles').select('role').eq('id', data.session.user.id).maybeSingle()
+          if (profile?.role === 'admin') {
+            saveLicense('ADMIN-BYPASS', 'pro', {})
+            setOk(true)
+            setCheck(true)
+            return
+          }
+        }
+        setCheck(true)
+      }).catch(() => setCheck(true))
+    } else {
+      setCheck(true)
+    }
   }, [])
 
   const onActivated = (lic) => {
@@ -35,7 +55,13 @@ function ActivationGate({ children }) {
     setOk(true)
   }
 
-  if (!check) return null
+  if (!check) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-800">
+        <p className="text-white/60 text-sm animate-pulse">Memeriksa lisensi…</p>
+      </div>
+    )
+  }
   if (!ok) return <ActivationPage onActivated={onActivated} />
   return children
 }

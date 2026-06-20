@@ -1,34 +1,15 @@
 import { useState, useEffect } from 'react'
-import { validateCode, saveLicense, getStoredLicense, fetchRemoteCodes, saveLocalCodes, tryLoadLocalCodes } from '../lib/codes.js'
+import { validateCode, saveLicense, fetchRemoteCodes, saveLocalCodes, tryLoadLocalCodes } from '../lib/codes.js'
 
 export default function ActivationPage({ onActivated }) {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [checkingExisting, setCheckingExisting] = useState(true)
 
-  // Cek lisensi tersimpan
-  useEffect(() => {
-    const existing = getStoredLicense()
-    if (existing) {
-      // Validasi ulang expiry
-      if (existing.tier === 'demo' && existing.expiresAt && Date.now() > existing.expiresAt) {
-        // Expired — tetap show activation screen
-        setCheckingExisting(false)
-        return
-      }
-      onActivated(existing)
-      return
-    }
-    setCheckingExisting(false)
-  }, [onActivated])
-
-  // Try fetch remote codes silently
+  // Fetch remote codes once
   useEffect(() => {
     fetchRemoteCodes().then((codes) => {
-      if (Array.isArray(codes)) {
-        saveLocalCodes(codes)
-      }
+      if (Array.isArray(codes)) saveLocalCodes(codes)
     }).catch(() => {})
   }, [])
 
@@ -44,7 +25,6 @@ export default function ActivationPage({ onActivated }) {
     setError('')
 
     try {
-      // Try remote codes dulu
       let bundledCodes = tryLoadLocalCodes()
       try {
         const remote = await fetchRemoteCodes()
@@ -70,12 +50,9 @@ export default function ActivationPage({ onActivated }) {
     }
   }
 
-  if (checkingExisting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-800">
-        <p className="text-white/60 text-sm">Memeriksa lisensi…</p>
-      </div>
-    )
+  const handleTrial = () => {
+    saveLicense('TRIAL-AUTO', 'demo', {})
+    onActivated({ code: 'TRIAL-AUTO', tier: 'demo' })
   }
 
   return (
@@ -90,7 +67,7 @@ export default function ActivationPage({ onActivated }) {
             Pendampingan Piloting Kurikulum Berbasis Cinta
           </p>
           <p className="text-xs text-slate-400 mt-1">
-            Masukkan kode aktivasi untuk mulai menggunakan aplikasi
+            Masukkan kode aktivasi yang sudah dibeli
           </p>
         </div>
 
@@ -120,6 +97,23 @@ export default function ActivationPage({ onActivated }) {
             disabled={loading}
           >
             {loading ? 'Memvalidasi…' : 'Aktivasi'}
+          </button>
+
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-3 text-slate-400">atau</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleTrial}
+            className="btn-outline w-full py-3 text-base border-amber-300 text-amber-700 hover:bg-amber-50"
+          >
+            🎁 Coba Gratis 5 Hari
           </button>
 
           <p className="text-xs text-slate-400 text-center">

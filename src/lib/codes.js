@@ -10,13 +10,13 @@ export const MASTER_CODE = 'KBC-POKJAWAS-JEMBER-2026'
 export const TIER_LABELS = {
   pro: 'Pro (Full Akses)',
   basic: 'Basic (Read-only)',
-  demo: 'Demo (7 hari)'
+  demo: 'Trial (5 hari)'
 }
 
 export const TIER_DAYS = {
   pro: 0,    // unlimited
   basic: 0,  // unlimited
-  demo: 7
+  demo: 5    // trial 5 hari
 }
 
 const STORAGE_KEY = 'kbc_license_v1'
