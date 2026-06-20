@@ -35,6 +35,13 @@ Write-Host "==> Siapkan dist..." -ForegroundColor Cyan
 Copy-Item dist/index.html dist/404.html -Force
 New-Item -Path dist/.nojekyll -ItemType File -Force | Out-Null
 
+# Copy data directory (codes.json dll) ke dist
+$dataDir = Join-Path $root "data"
+if (Test-Path $dataDir) {
+  New-Item -Path dist/data -ItemType Directory -Force | Out-Null
+  Copy-Item -Recurse -Path "$dataDir/*" -Destination dist/data -Force
+}
+
 Write-Host "==> Push ke gh-pages..." -ForegroundColor Cyan
 $tmpDir = Join-Path $env:TEMP "kbc-pages-$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Path $tmpDir | Out-Null
