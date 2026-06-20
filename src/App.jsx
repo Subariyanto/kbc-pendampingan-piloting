@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/AuthContext.jsx'
 import AppLayout from './components/AppLayout.jsx'
+import ActivationPage from './components/ActivationPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import MadrasahPage from './pages/MadrasahPage.jsx'
@@ -14,7 +16,31 @@ import LaporanPage from './pages/LaporanPage.jsx'
 import PengaturanPage from './pages/PengaturanPage.jsx'
 import DiagnosticPage from './pages/DiagnosticPage.jsx'
 import PenggunaPage from './pages/PenggunaPage.jsx'
+import LisensiPage from './pages/LisensiPage.jsx'
+import { getStoredLicense, saveLicense } from './lib/codes.js'
 
+// --- Gate: cek lisensi dari localStorage, redirect ke halaman aktivasi kalau belum ---
+function ActivationGate({ children }) {
+  const [ok, setOk] = useState(false)
+  const [check, setCheck] = useState(false)
+
+  useEffect(() => {
+    const lic = getStoredLicense()
+    if (lic) { setOk(true); setCheck(true); return }
+    setCheck(true)
+  }, [])
+
+  const onActivated = (lic) => {
+    saveLicense(lic.code, lic.tier, lic.deviceInfo)
+    setOk(true)
+  }
+
+  if (!check) return null
+  if (!ok) return <ActivationPage onActivated={onActivated} />
+  return children
+}
+
+// --- Route guard ---
 function PrivateRoute({ children, allowed }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
@@ -24,61 +50,72 @@ function PrivateRoute({ children, allowed }) {
 
 export default function App() {
   const { user } = useAuth()
+
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route
-        path="/*"
-        element={
-          <PrivateRoute>
-            <AppLayout>
-              <Routes>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/madrasah" element={<MadrasahPage />} />
-                <Route
-                  path="/pengawas"
-                  element={
-                    <PrivateRoute allowed={['admin', 'pengawas', 'viewer']}>
-                      <PengawasPage />
-                    </PrivateRoute>
-                  }
-                />
-                <Route path="/jadwal" element={<JadwalPage />} />
-                <Route
-                  path="/instrumen"
-                  element={
-                    <PrivateRoute allowed={['admin', 'pengawas', 'viewer']}>
-                      <InstrumenPage />
-                    </PrivateRoute>
-                  }
-                />
-                <Route path="/pendampingan" element={<PendampinganPage />} />
-                <Route path="/eviden" element={<EvidenPage />} />
-                <Route path="/tindak-lanjut" element={<TindakLanjutPage />} />
-                <Route path="/laporan" element={<LaporanPage />} />
-                <Route
-                  path="/pengaturan"
-                  element={
-                    <PrivateRoute allowed={['admin']}>
-                      <PengaturanPage />
-                    </PrivateRoute>
-                  }
-                />
-                <Route path="/diagnostic" element={<DiagnosticPage />} />
-                <Route
-                  path="/pengguna"
-                  element={
-                    <PrivateRoute allowed={['admin']}>
-                      <PenggunaPage />
-                    </PrivateRoute>
-                  }
-                />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </AppLayout>
-          </PrivateRoute>
-        }
-      />
-    </Routes>
+    <ActivationGate>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+        <Route
+          path="/*"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <Routes>
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/madrasah" element={<MadrasahPage />} />
+                  <Route
+                    path="/pengawas"
+                    element={
+                      <PrivateRoute allowed={['admin', 'pengawas', 'viewer']}>
+                        <PengawasPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route path="/jadwal" element={<JadwalPage />} />
+                  <Route
+                    path="/instrumen"
+                    element={
+                      <PrivateRoute allowed={['admin', 'pengawas', 'viewer']}>
+                        <InstrumenPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route path="/pendampingan" element={<PendampinganPage />} />
+                  <Route path="/eviden" element={<EvidenPage />} />
+                  <Route path="/tindak-lanjut" element={<TindakLanjutPage />} />
+                  <Route path="/laporan" element={<LaporanPage />} />
+                  <Route
+                    path="/pengaturan"
+                    element={
+                      <PrivateRoute allowed={['admin']}>
+                        <PengaturanPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route path="/diagnostic" element={<DiagnosticPage />} />
+                  <Route
+                    path="/pengguna"
+                    element={
+                      <PrivateRoute allowed={['admin']}>
+                        <PenggunaPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/lisensi"
+                    element={
+                      <PrivateRoute allowed={['admin']}>
+                        <LisensiPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+      </Routes>
+    </ActivationGate>
   )
 }
