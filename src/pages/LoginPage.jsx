@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useData } from '../context/DataContext.jsx'
-import { SUPABASE_ENABLED } from '../lib/supabase.js'
+import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
 import { getStoredLicense, saveLicense, validateCode, fetchRemoteCodes, saveLocalCodes, tryLoadLocalCodes, clearLicense } from '../lib/codes.js'
 
 const DEMO = [
@@ -26,6 +26,9 @@ export default function LoginPage() {
   const [activationError, setActivationError] = useState('')
   const [activationLoading, setActivationLoading] = useState(false)
   const [showActivation, setShowActivation] = useState(false)
+  const [mode, setMode] = useState('login') // 'login' | 'register'
+  const [registerNama, setRegisterNama] = useState('')
+  const [registerLoading, setRegisterLoading] = useState(false)
 
   const license = getStoredLicense()
   const licenseExpired = license?.tier === 'demo' && license.expiresAt && Date.now() > license.expiresAt
@@ -96,6 +99,43 @@ export default function LoginPage() {
     }
   }
 
+  const handleRegister = async (e) => {
+    e.preventDefault()
+    if (!registerNama.trim()) { toast.error('Nama lengkap harus diisi'); return }
+    setRegisterLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: username.trim(),
+        password,
+        options: {
+          data: { nama: registerNama.trim(), role: 'viewer' }
+        }
+      })
+      if (error) {
+        if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
+          toast.error('Email sudah terdaftar. Silakan login.')
+        } else {
+          toast.error(error.message)
+        }
+        setRegisterLoading(false)
+        return
+      }
+      if (data?.user) {
+        toast.success('Akun berhasil dibuat! Silakan cek email untuk konfirmasi, lalu login.')
+        setMode('login')
+        setRegisterNama('')
+      } else {
+        toast.success('Akun dibuat! Silakan login.')
+        setMode('login')
+        setRegisterNama('')
+      }
+    } catch (err) {
+      toast.error('Gagal mendaftar: ' + (err.message || 'Coba lagi'))
+    } finally {
+      setRegisterLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-toska-700 flex items-center justify-center p-4">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden grid lg:grid-cols-5">
@@ -145,19 +185,36 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <h2 className="text-xl font-semibold text-navy-900">Masuk ke Aplikasi</h2>
-          <p className="text-sm text-slate-500 mb-6">Gunakan akun yang diberikan admin Pokjawas.</p>
+          <h2 className="text-xl font-semibold text-navy-900">{mode === 'register' ? 'Daftar Akun Baru' : 'Masuk ke Aplikasi'}</h2>
+          <p className="text-sm text-slate-500 mb-6">
+            {mode === 'register'
+              ? 'Buat akun untuk mulai menggunakan aplikasi.'
+              : 'Gunakan akun yang diberikan admin Pokjawas.'}
+          </p>
 
-          <form onSubmit={submit} className="space-y-4">
+          <form onSubmit={mode === 'register' ? handleRegister : submit} className="space-y-4">
+            {mode === 'register' && (
+              <div>
+                <label className="label">Nama Lengkap</label>
+                <input
+                  className="input"
+                  type="text"
+                  value={registerNama}
+                  onChange={(e) => setRegisterNama(e.target.value)}
+                  placeholder="Nama Anda"
+                  required
+                />
+              </div>
+            )}
             <div>
-              <label className="label">{SUPABASE_ENABLED ? 'Email' : 'Username'}</label>
+              <label className="label">{SUPABASE_ENABLED || mode === 'register' ? 'Email' : 'Username'}</label>
               <input
                 className="input"
-                type={SUPABASE_ENABLED ? 'email' : 'text'}
+                type={SUPABASE_ENABLED || mode === 'register' ? 'email' : 'text'}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                autoComplete={SUPABASE_ENABLED ? 'email' : 'username'}
-                placeholder={SUPABASE_ENABLED ? 'nama@email.com' : 'contoh: admin'}
+                autoComplete={SUPABASE_ENABLED || mode === 'register' ? 'email' : 'username'}
+                placeholder={SUPABASE_ENABLED || mode === 'register' ? 'nama@email.com' : 'contoh: admin'}
                 required
               />
             </div>
@@ -173,12 +230,31 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <button type="submit" className="btn-primary w-full justify-center" disabled={loading}>
-              {loading ? 'Memproses…' : 'Masuk'}
+            <button type="submit" className="btn-primary w-full justify-center" disabled={loading || registerLoading}>
+              {mode === 'register' ? (registerLoading ? 'Mendaftar…' : 'Daftar') : (loading ? 'Memproses…' : 'Masuk')}
             </button>
           </form>
 
-          {!SUPABASE_ENABLED && (
+          {/* Toggle Login/Register — hanya di mode Supabase */}
+          {SUPABASE_ENABLED && (
+            <p className="text-sm text-slate-500 text-center mt-4">
+              {mode === 'login' ? (
+                <>Belum punya akun?{' '}
+                  <button type="button" onClick={() => { setMode('register'); setUsername(''); setPassword(''); setRegisterNama('') }} className="text-toska-700 font-medium hover:underline">
+                    Daftar sekarang
+                  </button>
+                </>
+              ) : (
+                <>Sudah punya akun?{' '}
+                  <button type="button" onClick={() => { setMode('login'); setRegisterNama('') }} className="text-toska-700 font-medium hover:underline">
+                    Masuk
+                  </button>
+                </>
+              )}
+            </p>
+          )}
+
+          {!SUPABASE_ENABLED && mode === 'login' && (
             <div className="mt-7">
               <p className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-2">Akun Demo</p>
               <div className="grid grid-cols-2 gap-2">
