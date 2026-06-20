@@ -202,106 +202,29 @@ export default function LoginPage() {
             </p>
           )}
 
-          {/* License section */}
+          {/* License section — selalu tampil, user bisa upgrade/downgrade dari sini */}
           <div className="mt-6 pt-4 border-t border-slate-200">
-            {isTrial ? (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">🎁</span>
-                  <p className="text-sm font-semibold text-amber-800">Trial Aktif — {daysLeft} hari tersisa</p>
+            {/* Status lisensi saat ini */}
+            {isTrial && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <span>🎁</span>
+                  <p className="text-xs font-semibold text-amber-800">
+                    Trial Aktif — {daysLeft} hari tersisa
+                  </p>
                 </div>
-                <p className="text-xs text-amber-600 mb-3">
-                  Ingin akses penuh tanpa batas? Masukkan kode aktivasi yang sudah dibeli.
-                </p>
-                {!showActivation ? (
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => setShowActivation(true)}
-                      className="text-xs px-3 py-1.5 rounded bg-amber-600 text-white hover:bg-amber-700 font-medium"
-                    >
-                      🔑 Upgrade ke Full
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleClearLicense}
-                      className="text-xs px-3 py-1.5 rounded bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"
-                    >
-                      Hapus Lisensi
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleActivation} className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        className="input text-xs py-1.5 flex-1 font-mono uppercase tracking-wider"
-                        placeholder="KBC-XXXX-XXXX"
-                        value={activationCode}
-                        onChange={(e) => { setActivationCode(e.target.value.toUpperCase()); setActivationError('') }}
-                        autoFocus
-                        autoComplete="off"
-                      />
-                      <button type="submit" className="btn-primary text-xs px-3 py-1.5" disabled={activationLoading}>
-                        {activationLoading ? '…' : 'Aktivasi'}
-                      </button>
-                    </div>
-                    {activationError && (
-                      <p className="text-xs text-rose-600">{activationError}</p>
-                    )}
-                  </form>
-                )}
               </div>
-            ) : licenseExpired ? (
-              <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
-                <p className="text-sm font-semibold text-rose-700 mb-1">Trial Sudah Berakhir ⏰</p>
-                <p className="text-xs text-rose-600 mb-3">
-                  Masa trial Anda telah habis. Beli kode aktivasi untuk melanjutkan.
-                </p>
-                {!showActivation ? (
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => setShowActivation(true)}
-                      className="text-xs px-3 py-1.5 rounded bg-rose-600 text-white hover:bg-rose-700 font-medium"
-                    >
-                      🔑 Beli & Aktivasi
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleClearLicense}
-                      className="text-xs px-3 py-1.5 rounded bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"
-                    >
-                      Hapus Lisensi
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleActivation} className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        className="input text-xs py-1.5 flex-1 font-mono uppercase tracking-wider"
-                        placeholder="KBC-XXXX-XXXX"
-                        value={activationCode}
-                        onChange={(e) => { setActivationCode(e.target.value.toUpperCase()); setActivationError('') }}
-                        autoFocus
-                        autoComplete="off"
-                      />
-                      <button type="submit" className="btn-primary text-xs px-3 py-1.5" disabled={activationLoading}>
-                        {activationLoading ? '…' : 'Aktivasi'}
-                      </button>
-                    </div>
-                    {activationError && (
-                      <p className="text-xs text-rose-600">{activationError}</p>
-                    )}
-                  </form>
-                )}
+            )}
+            {licenseExpired && (
+              <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 mb-3">
+                <p className="text-xs font-semibold text-rose-700">Trial Sudah Berakhir ⏰</p>
               </div>
-            ) : license ? (
-              <div className="bg-toska-50 border border-toska-200 rounded-lg p-3 flex items-center justify-between">
+            )}
+            {license && !isTrial && !licenseExpired && (
+              <div className="bg-toska-50 border border-toska-200 rounded-lg p-3 mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span>✅</span>
-                  <p className="text-xs text-toska-800">
-                    <span className="font-medium">Lisensi Pro Aktif</span> — akses penuh
-                  </p>
+                  <p className="text-xs text-toska-800 font-medium">Lisensi Pro — akses penuh</p>
                 </div>
                 <button
                   type="button"
@@ -311,55 +234,63 @@ export default function LoginPage() {
                   Hapus
                 </button>
               </div>
-            ) : (
-              <div className="text-center space-y-3">
-                <p className="text-xs text-slate-500">
-                  Aplikasi memerlukan lisensi untuk digunakan.
-                </p>
-                <div className="flex gap-2 justify-center">
-                  <button
-                    type="button"
-                    onClick={handleTrial}
-                    className="text-sm px-4 py-2 rounded-lg border-2 border-amber-300 text-amber-700 hover:bg-amber-50 font-medium"
-                  >
-                    🎁 Coba Gratis 5 Hari
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowActivation(true)}
-                    className="text-sm px-4 py-2 rounded-lg bg-navy-900 text-white hover:bg-navy-800 font-medium"
-                  >
-                    🔑 Aktivasi
+            )}
+
+            {/* Form aktivasi — selalu tersedia */}
+            <p className="text-xs text-slate-500 mb-2 text-center">
+              {license && !isTrial && !licenseExpired
+                ? 'Ingin ganti kode lisensi?'
+                : isTrial
+                  ? 'Upgrade ke akses penuh dengan kode aktivasi'
+                  : 'Aplikasi memerlukan lisensi untuk digunakan.'}
+            </p>
+
+            <div className="flex gap-2 justify-center mb-2">
+              {(!license || isTrial || licenseExpired) && (
+                <button
+                  type="button"
+                  onClick={handleTrial}
+                  className="text-sm px-4 py-2 rounded-lg border-2 border-amber-300 text-amber-700 hover:bg-amber-50 font-medium"
+                >
+                  🎁 Coba Gratis 5 Hari
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => { setShowActivation(!showActivation); setActivationError('') }}
+                className="text-sm px-4 py-2 rounded-lg bg-navy-900 text-white hover:bg-navy-800 font-medium"
+              >
+                🔑 Aktivasi
+              </button>
+            </div>
+
+            {showActivation && (
+              <form onSubmit={handleActivation} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    className="input text-sm py-2 flex-1 font-mono uppercase tracking-wider text-center"
+                    placeholder="KBC-XXXX-XXXX"
+                    value={activationCode}
+                    onChange={(e) => { setActivationCode(e.target.value.toUpperCase()); setActivationError('') }}
+                    autoFocus
+                    autoComplete="off"
+                  />
+                  <button type="submit" className="btn-primary text-sm px-4" disabled={activationLoading}>
+                    {activationLoading ? '…' : 'Aktivasi'}
                   </button>
                 </div>
-                {showActivation && (
-                  <form onSubmit={handleActivation} className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        className="input text-xs py-2 flex-1 font-mono uppercase tracking-wider text-center"
-                        placeholder="KBC-XXXX-XXXX"
-                        value={activationCode}
-                        onChange={(e) => { setActivationCode(e.target.value.toUpperCase()); setActivationError('') }}
-                        autoFocus
-                        autoComplete="off"
-                      />
-                      <button type="submit" className="btn-primary text-sm px-4" disabled={activationLoading}>
-                        {activationLoading ? '…' : 'Aktivasi'}
-                      </button>
-                    </div>
-                    {activationError && (
-                      <p className="text-xs text-rose-600">{activationError}</p>
-                    )}
-                  </form>
+                {activationError && (
+                  <p className="text-xs text-rose-600 text-center">{activationError}</p>
                 )}
-                <p className="text-[10px] text-slate-400">
-                  Belum punya kode?{' '}
-                  <a href="https://wa.me/6282330647698" target="_blank" rel="noreferrer" className="text-toska-700 hover:underline">
-                    Hubungi Admin
-                  </a>
-                </p>
-              </div>
+              </form>
             )}
+
+            <p className="text-[10px] text-slate-400 text-center">
+              Belum punya kode?{' '}
+              <a href="https://wa.me/6282330647698" target="_blank" rel="noreferrer" className="text-toska-700 hover:underline">
+                Hubungi Admin
+              </a>
+            </p>
           </div>
         </div>
       </div>
