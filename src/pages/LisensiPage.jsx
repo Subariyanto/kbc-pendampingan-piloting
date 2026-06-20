@@ -230,14 +230,19 @@ export default function LisensiPage() {
 
       {/* Deploy info */}
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-blue-800 mb-1">📤 Cara Deploy Kode</h3>
-        <ol className="text-xs text-blue-700 space-y-1 ml-4 list-decimal">
-          <li>Generate kode di halaman ini</li>
-          <li>Export JSON / Copy JSON</li>
-          <li>Simpan file ke folder <code className="text-blue-900 bg-blue-100 px-1 rounded">data/codes.json</code> di repo</li>
-          <li>Jalankan deploy script: <code className="text-blue-900 bg-blue-100 px-1 rounded">pwsh scripts/deploy-pages.ps1</code></li>
-          <li>Kode akan tersedia online di halaman aktivasi pengguna baru</li>
-        </ol>
+        <h3 className="text-sm font-semibold text-blue-800 mb-1">📤 Cara Deploy Kode — Bari Handle</h3>
+        <p className="text-xs text-blue-700 mb-2">
+          Setelah generate dan export/copy JSON di atas, kirim pesan di Discord:
+        </p>
+        <div className="bg-white rounded-lg px-3 py-2 font-mono text-xs text-navy-900 border border-blue-200 mb-2">
+          @Bari deploy kode lisensi KBC
+        </div>
+        <p className="text-xs text-blue-600">
+          Nanti Bari yang push ke repo, build, dan deploy ke gh-pages otomatis.
+        </p>
+        <p className="text-xs text-slate-400 mt-2">
+          Atau manual: Export JSON → simpan ke <code className="text-slate-500 bg-white px-1 rounded">data/codes.json</code> → commit → push → jalankan deploy script.
+        </p>
       </div>
     </div>
   )
