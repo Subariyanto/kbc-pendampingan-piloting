@@ -104,31 +104,40 @@ export default function LoginPage() {
     if (!registerNama.trim()) { toast.error('Nama lengkap harus diisi'); return }
     setRegisterLoading(true)
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // 1. Sign up
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: username.trim(),
         password,
         options: {
           data: { nama: registerNama.trim(), role: 'viewer' }
         }
       })
-      if (error) {
-        if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
+      if (signUpError) {
+        if (signUpError.message?.includes('already registered') || signUpError.message?.includes('already exists')) {
           toast.error('Email sudah terdaftar. Silakan login.')
         } else {
-          toast.error(error.message)
+          toast.error(signUpError.message)
         }
         setRegisterLoading(false)
         return
       }
-      if (data?.user) {
-        toast.success('Akun berhasil dibuat! Silakan cek email untuk konfirmasi, lalu login.')
-        setMode('login')
-        setRegisterNama('')
-      } else {
-        toast.success('Akun dibuat! Silakan login.')
-        setMode('login')
-        setRegisterNama('')
+      // 2. Jika user sudah langsung confirmed (email confirmation disabled), auto-login
+      if (signUpData?.user && !signUpData.user.identities?.length === 0) {
+        // User created, coba langsung login
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email: username.trim(),
+          password
+        })
+        if (!loginError) {
+          toast.success('Akun berhasil dibuat! Selamat datang.')
+          navigate('/', { replace: true })
+          return
+        }
       }
+      // 3. Perlu konfirmasi email — beri info
+      toast.success('Akun dibuat! Silakan cek email untuk konfirmasi, lalu login.')
+      setMode('login')
+      setRegisterNama('')
     } catch (err) {
       toast.error('Gagal mendaftar: ' + (err.message || 'Coba lagi'))
     } finally {

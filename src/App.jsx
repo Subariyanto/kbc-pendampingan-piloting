@@ -17,6 +17,7 @@ import PengaturanPage from './pages/PengaturanPage.jsx'
 import DiagnosticPage from './pages/DiagnosticPage.jsx'
 import PenggunaPage from './pages/PenggunaPage.jsx'
 import LisensiPage from './pages/LisensiPage.jsx'
+import PembelianPage from './pages/PembelianPage.jsx'
 import { getStoredLicense, saveLicense } from './lib/codes.js'
 import { SUPABASE_ENABLED, supabase } from './lib/supabase.js'
 
@@ -132,6 +133,14 @@ export default function App() {
                     element={
                       <PrivateRoute allowed={['admin']}>
                         <LisensiPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/pembelian"
+                    element={
+                      <PrivateRoute allowed={['admin']}>
+                        <PembelianPage />
                       </PrivateRoute>
                     }
                   />

@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/laporan', label: 'Laporan', icon: '📊', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
+  { to: '/pembelian', label: 'Pengaturan Pembelian', icon: '💳', roles: ['admin'] },
   { to: '/pengaturan', label: 'Pengaturan', icon: '⚙️', roles: ['admin'] },
   { to: '/pengguna', label: 'Kelola Pengguna', icon: '👥', roles: ['admin'] },
   { to: '/lisensi', label: 'Lisensi', icon: '🔑', roles: ['admin'] },
