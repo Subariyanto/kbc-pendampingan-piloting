@@ -422,18 +422,8 @@ export default function LoginPage() {
               </div>
             )}
             {license && !isTrial && !licenseExpired && (
-              <div className="bg-toska-50 border border-toska-200 rounded-lg p-3 mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span>✅</span>
-                  <p className="text-xs text-toska-800 font-medium">Lisensi Pro — akses penuh</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleClearLicense}
-                  className="text-xs text-slate-400 hover:text-slate-600 underline"
-                >
-                  Hapus
-                </button>
+              <div className="hidden">
+                {/* Lisensi Pro badge dihapus dari login page — sudah cukup ditampilkan di dashboard */}
               </div>
             )}
 
