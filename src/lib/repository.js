@@ -279,6 +279,63 @@ export async function deleteUser(id) {
   if (error) throw error
 }
 
+// =============================================================================
+// Activation Codes (admin only)
+// =============================================================================
+
+export async function listActivationCodes() {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi')
+  const { data, error } = await supabase
+    .from('activation_codes')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data || []).map((c) => ({
+    id: c.id,
+    code: c.code,
+    role: c.role,
+    nama: c.nama,
+    pengawasId: c.pengawas_id,
+    madrasahId: c.madrasah_id,
+    used: c.used,
+    usedBy: c.used_by,
+    usedAt: c.used_at,
+    createdAt: c.created_at,
+    note: c.note
+  }))
+}
+
+export async function createActivationCode({ code, role, nama, pengawasId, madrasahId, note }) {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi')
+  const payload = {
+    code: String(code).trim().toUpperCase(),
+    role,
+    nama: String(nama).trim(),
+    pengawas_id: pengawasId || null,
+    madrasah_id: madrasahId || null,
+    note: note || null,
+    used: false
+  }
+  const { data, error } = await supabase.from('activation_codes').insert(payload).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteActivationCode(id) {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi')
+  const { error } = await supabase.from('activation_codes').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function resetActivationCode(id) {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi')
+  const { error } = await supabase
+    .from('activation_codes')
+    .update({ used: false, used_by: null, used_at: null })
+    .eq('id', id)
+  if (error) throw error
+}
+
 // Diagnostic: validasi auth + RLS dengan insert+delete real ke tabel madrasah
 export async function runDiagnostic() {
   if (!supabase) return { ok: false, step: 'init', message: 'Supabase belum dikonfigurasi' }

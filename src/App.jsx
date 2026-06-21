@@ -18,6 +18,7 @@ import DiagnosticPage from './pages/DiagnosticPage.jsx'
 import PenggunaPage from './pages/PenggunaPage.jsx'
 import LisensiPage from './pages/LisensiPage.jsx'
 import PembelianPage from './pages/PembelianPage.jsx'
+import KodeAktivasiPage from './pages/KodeAktivasiPage.jsx'
 import { getStoredLicense, saveLicense } from './lib/codes.js'
 import { SUPABASE_ENABLED, supabase } from './lib/supabase.js'
 
@@ -133,6 +134,14 @@ export default function App() {
                     element={
                       <PrivateRoute allowed={['admin']}>
                         <LisensiPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/kode-aktivasi"
+                    element={
+                      <PrivateRoute allowed={['admin']}>
+                        <KodeAktivasiPage />
                       </PrivateRoute>
                     }
                   />
