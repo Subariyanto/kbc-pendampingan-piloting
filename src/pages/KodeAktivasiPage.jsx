@@ -308,6 +308,14 @@ function CodeRow({ code, onCopy, onDelete, onReset }) {
             <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-medium">
               ✓ Dipakai
             </span>
+            {(code.usedByNama || code.usedByEmail) && (
+              <p className="text-xs text-navy-900 font-medium mt-1 leading-tight">
+                {code.usedByNama || code.usedByEmail}
+                {code.usedByNama && code.usedByEmail && (
+                  <span className="block text-[10px] text-slate-500 font-normal">{code.usedByEmail}</span>
+                )}
+              </p>
+            )}
             {code.usedAt && (
               <p className="text-[10px] text-slate-500 mt-1">
                 {new Date(code.usedAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}

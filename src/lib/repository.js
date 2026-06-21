@@ -290,21 +290,37 @@ export async function listActivationCodes() {
     .select('*')
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data || []).map((c) => ({
-    id: c.id,
-    code: c.code,
-    role: c.role,
-    nama: c.nama,
-    pengawasId: c.pengawas_id,
-    madrasahId: c.madrasah_id,
-    tier: c.tier || 'pro',
-    validityDays: c.validity_days ?? 0,
-    used: c.used,
-    usedBy: c.used_by,
-    usedAt: c.used_at,
-    createdAt: c.created_at,
-    note: c.note
-  }))
+
+  // Ambil daftar user (admin only RPC) supaya bisa kasih tau kode dipakai oleh siapa.
+  // Kalau user bukan admin, RPC akan throw — silently fallback ke list tanpa info user.
+  let usersById = {}
+  try {
+    const { data: users } = await supabase.rpc('admin_users_list')
+    if (Array.isArray(users)) {
+      usersById = Object.fromEntries(users.map((u) => [u.id, u]))
+    }
+  } catch {}
+
+  return (data || []).map((c) => {
+    const u = c.used_by ? usersById[c.used_by] : null
+    return {
+      id: c.id,
+      code: c.code,
+      role: c.role,
+      nama: c.nama,
+      pengawasId: c.pengawas_id,
+      madrasahId: c.madrasah_id,
+      tier: c.tier || 'pro',
+      validityDays: c.validity_days ?? 0,
+      used: c.used,
+      usedBy: c.used_by,
+      usedByNama: u?.nama || null,
+      usedByEmail: u?.email || null,
+      usedAt: c.used_at,
+      createdAt: c.created_at,
+      note: c.note
+    }
+  })
 }
 
 export async function createActivationCode({ code, role, nama, pengawasId, madrasahId, note, tier, validityDays }) {
