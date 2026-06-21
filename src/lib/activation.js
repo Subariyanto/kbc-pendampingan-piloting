@@ -1,11 +1,16 @@
 // =============================================================================
 // Kode Aktivasi via Supabase — Pencarian & validasi kode (mode Supabase)
 // =============================================================================
-// Flow:
-// 1. User masukkan kode aktivasi
-// 2. Cek tabel public.activation_codes (anon access)
-// 3. Kalau valid → auto-buat akun Supabase Auth + langsung login
-// 4. Fallback: master code & bundled codes (mode lokal)
+// Flow baru (gaya e-RHK):
+// 1. User daftar: email + password + nama + kode aktivasi
+// 2. Kode aktivasi divalidasi ke tabel public.activation_codes
+// 3. Akun Supabase Auth dibuat dengan email/password milik user
+// 4. Trigger handle_new_user buat profile + tandai kode sebagai used
+// 5. Auto-login setelah signUp sukses
+//
+// Backward-compat: activateAndRegister() lama tetap dipertahankan untuk
+// mode lokal (master code / bundled codes) tapi tidak dipakai lagi di
+// Supabase mode.
 
 import { supabase } from './supabase.js'
 import { MASTER_CODE, getStoredLicense, saveLicense, clearLicense } from './codes.js'
@@ -26,7 +31,101 @@ export async function lookupActivationCode(code) {
   return data
 }
 
-// ---- Register user via kode aktivasi ----
+// ---- Register user dengan email + password milik user sendiri (flow e-RHK) ----
+// User input: email, password, nama, kode aktivasi.
+// Kode aktivasi divalidasi → akun Supabase dibuat → auto-login.
+export async function registerWithEmailAndCode({ email, password, nama, code }) {
+  if (!supabase) {
+    return { ok: false, error: 'Mode Supabase belum aktif' }
+  }
+  const cleanCode = String(code || '').trim().toUpperCase()
+  const cleanEmail = String(email || '').trim().toLowerCase()
+  const cleanNama = String(nama || '').trim()
+
+  if (!cleanEmail || !password) {
+    return { ok: false, error: 'Email dan password wajib diisi' }
+  }
+  if (password.length < 6) {
+    return { ok: false, error: 'Password minimal 6 karakter' }
+  }
+  if (!cleanNama) {
+    return { ok: false, error: 'Nama wajib diisi' }
+  }
+  if (!cleanCode) {
+    return { ok: false, error: 'Kode aktivasi wajib diisi' }
+  }
+
+  // 1. Master code → skip Supabase, langsung lisensi (akun tetap dibuat di Supabase)
+  let activationData = null
+  if (cleanCode === MASTER_CODE) {
+    // Master code: role admin default
+    activationData = { role: 'admin', nama: cleanNama, pengawas_id: null, madrasah_id: null }
+  } else {
+    // 2. Cek kode di tabel activation_codes
+    const found = await lookupActivationCode(cleanCode)
+    if (!found) {
+      return { ok: false, error: 'Kode aktivasi tidak ditemukan' }
+    }
+    if (found.used) {
+      return { ok: false, error: 'Kode aktivasi sudah digunakan oleh user lain' }
+    }
+    activationData = found
+  }
+
+  // 3. Daftar akun di Supabase Auth dengan email/password milik user
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password,
+    options: {
+      data: {
+        nama: cleanNama,
+        role: activationData.role,
+        pengawas_id: activationData.pengawas_id || '',
+        madrasah_id: activationData.madrasah_id || '',
+        activation_code: cleanCode
+      }
+    }
+  })
+
+  if (signUpError) {
+    if (signUpError.message?.toLowerCase().includes('already')) {
+      return { ok: false, error: 'Email ini sudah terdaftar. Silakan login langsung atau pakai email lain.' }
+    }
+    return { ok: false, error: signUpError.message || 'Gagal mendaftar' }
+  }
+
+  // 4. Auto-login (kalau email confirmation di Supabase di-enable, signUp tidak
+  //    langsung kasih session — kita tetap coba signInWithPassword sebagai fallback)
+  let session = signUpData?.session
+  if (!session) {
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+      email: cleanEmail, password
+    })
+    if (loginError) {
+      return {
+        ok: true,
+        mode: 'pending_confirmation',
+        message: 'Akun dibuat. Cek email Bapak/Ibu untuk konfirmasi sebelum login.',
+        email: cleanEmail
+      }
+    }
+    session = loginData?.session
+  }
+
+  // 5. Simpan lisensi
+  saveLicense(cleanCode, 'pro', { via: 'supabase', role: activationData.role })
+
+  return {
+    ok: true,
+    mode: 'registered',
+    nama: cleanNama,
+    role: activationData.role,
+    email: cleanEmail,
+    message: `Pendaftaran berhasil! Selamat datang, ${cleanNama}.`
+  }
+}
+
+// ---- (Legacy) Aktivasi mode lokal — fallback master code / bundled codes ----
 export async function activateAndRegister(code) {
   const clean = String(code).trim().toUpperCase()
 
@@ -36,7 +135,7 @@ export async function activateAndRegister(code) {
     return { ok: true, mode: 'master', message: 'Master code diterima — akses penuh' }
   }
 
-  // 2. Cek bundled codes (fallback mode lokal tanpa Supabase)
+  // 2. Mode lokal tanpa Supabase: cek bundled codes
   if (!supabase) {
     const { validateCode, tryLoadLocalCodes, fetchRemoteCodes, saveLocalCodes } = await import('./codes.js')
     let bundledCodes = tryLoadLocalCodes()
@@ -50,82 +149,11 @@ export async function activateAndRegister(code) {
     return { ok: true, mode: 'license', tier: result.tier, message: 'Kode lisensi diterima' }
   }
 
-  // 3. Cek kode di Supabase
-  const activation = await lookupActivationCode(clean)
-  if (!activation) {
-    return { ok: false, error: 'Kode aktivasi tidak ditemukan' }
-  }
-  if (activation.used) {
-    return { ok: false, error: 'Kode aktivasi sudah digunakan' }
-  }
-
-  // 4. Buat akun Supabase Auth otomatis
-  //    Email = code + domain internal (tidak perlu email beneran)
-  const email = `${clean.toLowerCase()}@kbc.internal`
-  const password = generatePassword()
-
-  // Simpan session admin saat ini (kalau ada) supaya tidak hilang
-  const { data: adminSession } = await supabase.auth.getSession()
-  const adminAccess = adminSession?.session?.access_token
-  const adminRefresh = adminSession?.session?.refresh_token
-
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        nama: activation.nama,
-        role: activation.role,
-        pengawas_id: activation.pengawas_id || '',
-        madrasah_id: activation.madrasah_id || '',
-        activation_code: clean
-      }
-    }
-  })
-
-  if (signUpError) {
-    if (signUpError.message?.includes('already registered')) {
-      // User sudah pernah aktivasi — coba langsung login
-      const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
-      if (loginErr) return { ok: false, error: 'Akun sudah ada. Gunakan fitur "Lupa Password" atau hubungi admin.' }
-      saveLicense(clean, 'pro')
-      return { ok: true, mode: 'relogin', message: 'Akun sudah teraktivasi sebelumnya' }
-    }
-    return { ok: false, error: signUpError.message }
-  }
-
-  // 5. Restore session admin (kalau ada) — user baru sudah terdaftar, trigger handle_new_user sudah jalan
-  if (adminAccess && adminRefresh) {
-    await supabase.auth.setSession({ access_token: adminAccess, refresh_token: adminRefresh })
-  }
-
-  // 6. Login dengan user baru
-  const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-
-  if (loginError) {
-    return { ok: false, error: 'Akun dibuat tapi gagal login: ' + loginError.message }
-  }
-
-  // 7. Simpan lisensi
-  saveLicense(clean, 'pro', { via: 'supabase', role: activation.role })
-
+  // 3. Mode Supabase: arahkan user ke flow registrasi (email+password)
   return {
-    ok: true,
-    mode: 'activated',
-    nama: activation.nama,
-    role: activation.role,
-    message: `Aktivasi berhasil! Selamat datang, ${activation.nama}.`
+    ok: false,
+    error: 'Silakan gunakan menu Daftar Akun untuk membuat akun baru dengan kode aktivasi.'
   }
-}
-
-// ---- Password generator (internal, tidak perlu user tahu) ----
-function generatePassword() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  const specials = '!@#$%^&*'
-  let pwd = ''
-  for (let i = 0; i < 14; i++) pwd += chars[Math.floor(Math.random() * chars.length)]
-  pwd += specials[Math.floor(Math.random() * specials.length)]
-  return pwd
 }
 
 // ---- Re-export dr codes.js untuk kompatibilitas ----

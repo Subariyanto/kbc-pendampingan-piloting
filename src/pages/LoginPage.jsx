@@ -4,8 +4,11 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useData } from '../context/DataContext.jsx'
 import { SUPABASE_ENABLED } from '../lib/supabase.js'
-import { getStoredLicense, saveLicense, validateCode, fetchRemoteCodes, saveLocalCodes, tryLoadLocalCodes, clearLicense } from '../lib/codes.js'
-import { activateAndRegister, MASTER_CODE } from '../lib/activation.js'
+import {
+  getStoredLicense, saveLicense, validateCode, fetchRemoteCodes,
+  saveLocalCodes, tryLoadLocalCodes, clearLicense
+} from '../lib/codes.js'
+import { registerWithEmailAndCode, activateAndRegister, MASTER_CODE } from '../lib/activation.js'
 
 const DEMO = [
   { role: 'Admin', user: 'admin', pass: 'admin123' },
@@ -20,19 +23,36 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const { state } = useData()
   const settings = state.settings
+
+  // Mode form: 'login' | 'register' (Supabase only)
+  const [mode, setMode] = useState('login')
+
+  // ---- Login state ----
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // ---- Register state (Supabase mode) ----
+  const [regEmail, setRegEmail] = useState('')
+  const [regPassword, setRegPassword] = useState('')
+  const [regPassword2, setRegPassword2] = useState('')
+  const [regNama, setRegNama] = useState('')
+  const [regCode, setRegCode] = useState('')
+  const [regError, setRegError] = useState('')
+  const [regLoading, setRegLoading] = useState(false)
+
+  // ---- Aktivasi lisensi (manual, untuk semua mode) ----
   const [activationCode, setActivationCode] = useState('')
   const [activationError, setActivationError] = useState('')
   const [activationLoading, setActivationLoading] = useState(false)
   const [showActivation, setShowActivation] = useState(false)
-  const [mode, setMode] = useState('login') // 'login' | 'activate' (Supabase), atau 'login' only (lokal)
 
   const license = getStoredLicense()
   const licenseExpired = license?.tier === 'demo' && license.expiresAt && Date.now() > license.expiresAt
   const isTrial = license?.tier === 'demo' && !licenseExpired
-  const daysLeft = isTrial && license.expiresAt ? Math.max(0, Math.ceil((license.expiresAt - Date.now()) / 86400000)) : 0
+  const daysLeft = isTrial && license.expiresAt
+    ? Math.max(0, Math.ceil((license.expiresAt - Date.now()) / 86400000))
+    : 0
 
   const submit = async (e) => {
     e.preventDefault()
@@ -52,8 +72,55 @@ export default function LoginPage() {
     setPassword(p)
   }
 
-  // Aktivasi via kode (mode Supabase: auto-buat akun + login)
-  const handleActivation = async (e) => {
+  // ---- Daftar akun baru (Supabase mode, gaya e-RHK) ----
+  const handleRegister = async (e) => {
+    e.preventDefault()
+    setRegError('')
+
+    if (regPassword !== regPassword2) {
+      setRegError('Konfirmasi password tidak cocok')
+      return
+    }
+    if (regPassword.length < 6) {
+      setRegError('Password minimal 6 karakter')
+      return
+    }
+
+    setRegLoading(true)
+    try {
+      const result = await registerWithEmailAndCode({
+        email: regEmail,
+        password: regPassword,
+        nama: regNama,
+        code: regCode
+      })
+      if (!result.ok) {
+        setRegError(result.error || 'Pendaftaran gagal')
+        setRegLoading(false)
+        return
+      }
+      // Simpan lisensi sudah dilakukan di registerWithEmailAndCode
+      if (result.mode === 'pending_confirmation') {
+        toast.success(result.message || 'Akun dibuat. Cek email untuk konfirmasi.')
+        setMode('login')
+        setUsername(result.email || regEmail)
+        setRegEmail(''); setRegPassword(''); setRegPassword2(''); setRegNama(''); setRegCode('')
+        setRegLoading(false)
+        return
+      }
+      toast.success(result.message || 'Pendaftaran berhasil!')
+      // Auto-login: AuthContext sudah subscribe onAuthStateChange,
+      // user otomatis ter-set. Redirect ke dashboard.
+      navigate('/', { replace: true })
+    } catch (err) {
+      setRegError('Gagal: ' + (err.message || 'Coba lagi'))
+    } finally {
+      setRegLoading(false)
+    }
+  }
+
+  // ---- Aktivasi lisensi manual (footer, untuk semua mode) ----
+  const handleManualActivation = async (e) => {
     e.preventDefault()
     const clean = String(activationCode).trim().toUpperCase()
     if (!clean) {
@@ -65,24 +132,17 @@ export default function LoginPage() {
 
     try {
       if (SUPABASE_ENABLED) {
-        // Mode Supabase: cek kode → auto-buat akun → auto-login
-        const result = await activateAndRegister(clean)
-        if (!result.ok) {
-          setActivationError(result.error || 'Kode aktivasi tidak valid')
-          setActivationLoading(false)
+        // Mode Supabase: master code only (registrasi user pakai form Daftar)
+        if (clean === MASTER_CODE) {
+          saveLicense(clean, 'pro', { via: 'master' })
+          toast.success('Master code diterima — akses penuh')
+          setActivationCode(''); setShowActivation(false)
+          window.location.reload()
           return
         }
-        toast.success(result.message || 'Aktivasi berhasil!')
-        setActivationCode('')
-        setShowActivation(false)
-        if (result.mode === 'activated' || result.mode === 'relogin') {
-          // Sudah auto-login, redirect ke dashboard
-          navigate('/', { replace: true })
-        } else {
-          window.location.reload()
-        }
+        setActivationError('Untuk akun baru, silakan pakai menu Daftar Akun. Tombol ini hanya untuk master code lisensi.')
       } else {
-        // Mode lokal: kode aktivasi = lisensi (tidak butuh register)
+        // Mode lokal: kode aktivasi = lisensi
         let bundledCodes = tryLoadLocalCodes()
         try {
           const remote = await fetchRemoteCodes()
@@ -91,13 +151,11 @@ export default function LoginPage() {
         const result = validateCode(clean, bundledCodes)
         if (!result.valid) {
           setActivationError(result.error || 'Kode aktivasi tidak valid')
-          setActivationLoading(false)
           return
         }
         saveLicense(clean, result.tier)
         toast.success('Aktivasi berhasil! Silakan login.')
-        setActivationCode('')
-        setShowActivation(false)
+        setActivationCode(''); setShowActivation(false)
         window.location.reload()
       }
     } catch (err) {
@@ -169,64 +227,112 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* ---- Mode: Aktivasi (Supabase) ---- */}
-          {SUPABASE_ENABLED && mode === 'activate' && (
+          {/* ---- Mode: Daftar (Supabase) ---- */}
+          {SUPABASE_ENABLED && mode === 'register' && (
             <>
-              <h2 className="text-xl font-semibold text-navy-900">Aktivasi Akun</h2>
-              <p className="text-sm text-slate-500 mb-6">
-                Masukkan kode aktivasi dari admin Pokjawas untuk membuat akun.
+              <h2 className="text-xl font-semibold text-navy-900">Daftar Akun Baru</h2>
+              <p className="text-sm text-slate-500 mb-5">
+                Masukkan email, password, dan kode aktivasi dari admin Pokjawas.
               </p>
 
-              <form onSubmit={handleActivation} className="space-y-4">
+              <form onSubmit={handleRegister} className="space-y-3">
                 <div>
-                  <label className="label">Kode Aktivasi</label>
+                  <label className="label">Nama Lengkap</label>
                   <input
-                    className="input text-center font-mono uppercase tracking-widest text-lg"
-                    placeholder="KBC-XXXX-XXXX"
-                    value={activationCode}
-                    onChange={(e) => { setActivationCode(e.target.value.toUpperCase()); setActivationError('') }}
-                    autoFocus
-                    autoComplete="off"
+                    className="input"
+                    value={regNama}
+                    onChange={(e) => setRegNama(e.target.value)}
+                    placeholder="Contoh: Subariyanto, S.Pd, M.Pd.I"
+                    autoComplete="name"
                     required
                   />
                 </div>
-                {activationError && (
+                <div>
+                  <label className="label">Email</label>
+                  <input
+                    className="input"
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="nama@email.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Password</label>
+                    <input
+                      className="input"
+                      type="password"
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="Min 6 karakter"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Ulangi Password</label>
+                    <input
+                      className="input"
+                      type="password"
+                      value={regPassword2}
+                      onChange={(e) => setRegPassword2(e.target.value)}
+                      placeholder="Konfirmasi"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Kode Aktivasi</label>
+                  <input
+                    className="input text-center font-mono uppercase tracking-widest"
+                    value={regCode}
+                    onChange={(e) => setRegCode(e.target.value.toUpperCase())}
+                    placeholder="KBC-XXXX-XXXX"
+                    autoComplete="off"
+                    required
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Kode dari admin Pokjawas menentukan role akun (admin/pengawas/kepala/viewer).
+                  </p>
+                </div>
+                {regError && (
                   <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
-                    <p className="text-sm text-rose-700">{activationError}</p>
+                    <p className="text-sm text-rose-700">{regError}</p>
                   </div>
                 )}
-                <button type="submit" className="btn-primary w-full justify-center text-lg py-3" disabled={activationLoading}>
-                  {activationLoading ? 'Memproses…' : '🔑 Aktivasi & Masuk'}
+                <button
+                  type="submit"
+                  className="btn-primary w-full justify-center text-base py-2.5"
+                  disabled={regLoading}
+                >
+                  {regLoading ? 'Memproses…' : '📝 Daftar & Masuk'}
                 </button>
               </form>
 
               <div className="mt-4 text-center">
                 <button
                   type="button"
-                  onClick={() => { setMode('login'); setActivationError('') }}
+                  onClick={() => { setMode('login'); setRegError('') }}
                   className="text-sm text-toska-700 hover:underline"
                 >
-                  ← Kembali ke login
+                  ← Sudah punya akun? Masuk di sini
                 </button>
-              </div>
-
-              <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-xs text-slate-500 mb-2">ℹ️ <strong>Cara aktivasi:</strong></p>
-                <ol className="text-xs text-slate-600 list-decimal list-inside space-y-1">
-                  <li>Dapatkan kode aktivasi dari admin Pokjawas</li>
-                  <li>Masukkan kode di atas, klik <strong>Aktivasi & Masuk</strong></li>
-                  <li>Akun otomatis dibuat dan langsung login</li>
-                </ol>
               </div>
             </>
           )}
 
           {/* ---- Mode: Login ---- */}
-          {(mode === 'login') && (
+          {mode === 'login' && (
             <>
               <h2 className="text-xl font-semibold text-navy-900">Masuk ke Aplikasi</h2>
               <p className="text-sm text-slate-500 mb-6">
-                Gunakan akun yang diberikan admin Pokjawas.
+                {SUPABASE_ENABLED
+                  ? 'Gunakan email & password yang Bapak/Ibu daftarkan.'
+                  : 'Gunakan akun yang diberikan admin Pokjawas.'}
               </p>
 
               <form onSubmit={submit} className="space-y-4">
@@ -259,18 +365,18 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              {/* Tombol Aktivasi — mode Supabase */}
+              {/* Tombol Daftar — mode Supabase */}
               {SUPABASE_ENABLED && (
-                <div className="text-center mt-4">
+                <div className="mt-4">
                   <button
                     type="button"
-                    onClick={() => { setMode('activate'); setActivationCode(''); setActivationError('') }}
+                    onClick={() => { setMode('register'); setRegError('') }}
                     className="btn-primary w-full justify-center bg-toska-600 hover:bg-toska-700"
                   >
-                    🔑 Aktivasi Akun Baru
+                    📝 Daftar Akun Baru
                   </button>
-                  <p className="text-xs text-slate-400 mt-2">
-                    Belum punya akun? Gunakan kode aktivasi dari admin.
+                  <p className="text-xs text-slate-400 mt-2 text-center">
+                    Belum punya akun? Daftar dengan kode aktivasi dari admin.
                   </p>
                 </div>
               )}
@@ -293,13 +399,6 @@ export default function LoginPage() {
                     ))}
                   </div>
                 </div>
-              )}
-
-              {SUPABASE_ENABLED && (
-                <p className="text-xs text-slate-500 mt-6">
-                  ⚠️ Akun dibuat melalui kode aktivasi dari admin.<br />
-                  Klik <strong>Aktivasi Akun Baru</strong> untuk registrasi.
-                </p>
               )}
             </>
           )}
@@ -367,7 +466,7 @@ export default function LoginPage() {
             </div>
 
             {showActivation && (
-              <form onSubmit={handleActivation} className="space-y-2">
+              <form onSubmit={handleManualActivation} className="space-y-2">
                 <div className="flex gap-2">
                   <input
                     className="input text-sm py-2 flex-1 font-mono uppercase tracking-wider text-center"
