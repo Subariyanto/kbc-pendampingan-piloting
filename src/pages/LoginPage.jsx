@@ -429,11 +429,11 @@ export default function LoginPage() {
 
             {/* Form aktivasi kode lisensi (manual) — tersedia di semua mode */}
             <p className="text-xs text-slate-500 mb-2 text-center">
-              {license && !isTrial && !licenseExpired
-                ? 'Ingin ganti kode lisensi?'
-                : isTrial
-                  ? 'Upgrade ke akses penuh dengan kode aktivasi'
-                  : 'Aplikasi memerlukan lisensi untuk digunakan.'}
+              {isTrial
+                ? 'Upgrade ke akses penuh dengan kode aktivasi'
+                : (!license || licenseExpired)
+                  ? 'Aplikasi memerlukan lisensi untuk digunakan.'
+                  : ''}
             </p>
 
             <div className="flex gap-2 justify-center mb-2">
@@ -451,7 +451,7 @@ export default function LoginPage() {
                 onClick={() => { setShowActivation(!showActivation); setActivationError('') }}
                 className="text-sm px-4 py-2 rounded-lg bg-navy-900 text-white hover:bg-navy-800 font-medium"
               >
-                🔑 Aktivasi Lisensi
+                💳 Beli Lisensi FULL
               </button>
             </div>
 
