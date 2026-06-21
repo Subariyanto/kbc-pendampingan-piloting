@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useData } from '../context/DataContext.jsx'
-import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
+import { SUPABASE_ENABLED } from '../lib/supabase.js'
 import { getStoredLicense, saveLicense, validateCode, fetchRemoteCodes, saveLocalCodes, tryLoadLocalCodes, clearLicense } from '../lib/codes.js'
+import { activateAndRegister, MASTER_CODE } from '../lib/activation.js'
 
 const DEMO = [
   { role: 'Admin', user: 'admin', pass: 'admin123' },
@@ -26,9 +27,7 @@ export default function LoginPage() {
   const [activationError, setActivationError] = useState('')
   const [activationLoading, setActivationLoading] = useState(false)
   const [showActivation, setShowActivation] = useState(false)
-  const [mode, setMode] = useState('login') // 'login' | 'register'
-  const [registerNama, setRegisterNama] = useState('')
-  const [registerLoading, setRegisterLoading] = useState(false)
+  const [mode, setMode] = useState('login') // 'login' | 'activate' (Supabase), atau 'login' only (lokal)
 
   const license = getStoredLicense()
   const licenseExpired = license?.tier === 'demo' && license.expiresAt && Date.now() > license.expiresAt
@@ -53,35 +52,57 @@ export default function LoginPage() {
     setPassword(p)
   }
 
+  // Aktivasi via kode (mode Supabase: auto-buat akun + login)
   const handleActivation = async (e) => {
     e.preventDefault()
-    const clean = String(activationCode).trim()
+    const clean = String(activationCode).trim().toUpperCase()
     if (!clean) {
       setActivationError('Masukkan kode aktivasi')
       return
     }
     setActivationLoading(true)
     setActivationError('')
+
     try {
-      let bundledCodes = tryLoadLocalCodes()
-      try {
-        const remote = await fetchRemoteCodes()
-        if (Array.isArray(remote)) { bundledCodes = remote; saveLocalCodes(remote) }
-      } catch {}
-      const result = validateCode(clean, bundledCodes)
-      if (!result.valid) {
-        setActivationError(result.error || 'Kode aktivasi tidak valid')
-        setActivationLoading(false)
-        return
+      if (SUPABASE_ENABLED) {
+        // Mode Supabase: cek kode → auto-buat akun → auto-login
+        const result = await activateAndRegister(clean)
+        if (!result.ok) {
+          setActivationError(result.error || 'Kode aktivasi tidak valid')
+          setActivationLoading(false)
+          return
+        }
+        toast.success(result.message || 'Aktivasi berhasil!')
+        setActivationCode('')
+        setShowActivation(false)
+        if (result.mode === 'activated' || result.mode === 'relogin') {
+          // Sudah auto-login, redirect ke dashboard
+          navigate('/', { replace: true })
+        } else {
+          window.location.reload()
+        }
+      } else {
+        // Mode lokal: kode aktivasi = lisensi (tidak butuh register)
+        let bundledCodes = tryLoadLocalCodes()
+        try {
+          const remote = await fetchRemoteCodes()
+          if (Array.isArray(remote)) { bundledCodes = remote; saveLocalCodes(remote) }
+        } catch {}
+        const result = validateCode(clean, bundledCodes)
+        if (!result.valid) {
+          setActivationError(result.error || 'Kode aktivasi tidak valid')
+          setActivationLoading(false)
+          return
+        }
+        saveLicense(clean, result.tier)
+        toast.success('Aktivasi berhasil! Silakan login.')
+        setActivationCode('')
+        setShowActivation(false)
+        window.location.reload()
       }
-      saveLicense(clean, result.tier)
-      toast.success('Aktivasi berhasil! Silakan login.')
-      setActivationCode('')
-      setShowActivation(false)
-      // Refresh license info
-      window.location.reload()
-    } catch {
-      setActivationError('Gagal memvalidasi kode')
+    } catch (err) {
+      setActivationError('Gagal: ' + (err.message || 'Coba lagi'))
+    } finally {
       setActivationLoading(false)
     }
   }
@@ -96,52 +117,6 @@ export default function LoginPage() {
     if (confirm('Hapus lisensi yang tersimpan? Anda akan diarahkan ke halaman aktivasi.')) {
       clearLicense()
       window.location.reload()
-    }
-  }
-
-  const handleRegister = async (e) => {
-    e.preventDefault()
-    if (!registerNama.trim()) { toast.error('Nama lengkap harus diisi'); return }
-    setRegisterLoading(true)
-    try {
-      // 1. Sign up
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: username.trim(),
-        password,
-        options: {
-          data: { nama: registerNama.trim(), role: 'viewer' }
-        }
-      })
-      if (signUpError) {
-        if (signUpError.message?.includes('already registered') || signUpError.message?.includes('already exists')) {
-          toast.error('Email sudah terdaftar. Silakan login.')
-        } else {
-          toast.error(signUpError.message)
-        }
-        setRegisterLoading(false)
-        return
-      }
-      // 2. Jika user sudah langsung confirmed (email confirmation disabled), auto-login
-      if (signUpData?.user && !signUpData.user.identities?.length === 0) {
-        // User created, coba langsung login
-        const { error: loginError } = await supabase.auth.signInWithPassword({
-          email: username.trim(),
-          password
-        })
-        if (!loginError) {
-          toast.success('Akun berhasil dibuat! Selamat datang.')
-          navigate('/', { replace: true })
-          return
-        }
-      }
-      // 3. Perlu konfirmasi email — beri info
-      toast.success('Akun dibuat! Silakan cek email untuk konfirmasi, lalu login.')
-      setMode('login')
-      setRegisterNama('')
-    } catch (err) {
-      toast.error('Gagal mendaftar: ' + (err.message || 'Coba lagi'))
-    } finally {
-      setRegisterLoading(false)
     }
   }
 
@@ -194,100 +169,142 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <h2 className="text-xl font-semibold text-navy-900">{mode === 'register' ? 'Daftar Akun Baru' : 'Masuk ke Aplikasi'}</h2>
-          <p className="text-sm text-slate-500 mb-6">
-            {mode === 'register'
-              ? 'Buat akun untuk mulai menggunakan aplikasi.'
-              : 'Gunakan akun yang diberikan admin Pokjawas.'}
-          </p>
+          {/* ---- Mode: Aktivasi (Supabase) ---- */}
+          {SUPABASE_ENABLED && mode === 'activate' && (
+            <>
+              <h2 className="text-xl font-semibold text-navy-900">Aktivasi Akun</h2>
+              <p className="text-sm text-slate-500 mb-6">
+                Masukkan kode aktivasi dari admin Pokjawas untuk membuat akun.
+              </p>
 
-          <form onSubmit={mode === 'register' ? handleRegister : submit} className="space-y-4">
-            {mode === 'register' && (
-              <div>
-                <label className="label">Nama Lengkap</label>
-                <input
-                  className="input"
-                  type="text"
-                  value={registerNama}
-                  onChange={(e) => setRegisterNama(e.target.value)}
-                  placeholder="Nama Anda"
-                  required
-                />
+              <form onSubmit={handleActivation} className="space-y-4">
+                <div>
+                  <label className="label">Kode Aktivasi</label>
+                  <input
+                    className="input text-center font-mono uppercase tracking-widest text-lg"
+                    placeholder="KBC-XXXX-XXXX"
+                    value={activationCode}
+                    onChange={(e) => { setActivationCode(e.target.value.toUpperCase()); setActivationError('') }}
+                    autoFocus
+                    autoComplete="off"
+                    required
+                  />
+                </div>
+                {activationError && (
+                  <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+                    <p className="text-sm text-rose-700">{activationError}</p>
+                  </div>
+                )}
+                <button type="submit" className="btn-primary w-full justify-center text-lg py-3" disabled={activationLoading}>
+                  {activationLoading ? 'Memproses…' : '🔑 Aktivasi & Masuk'}
+                </button>
+              </form>
+
+              <div className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={() => { setMode('login'); setActivationError('') }}
+                  className="text-sm text-toska-700 hover:underline"
+                >
+                  ← Kembali ke login
+                </button>
               </div>
-            )}
-            <div>
-              <label className="label">{SUPABASE_ENABLED || mode === 'register' ? 'Email' : 'Username'}</label>
-              <input
-                className="input"
-                type={SUPABASE_ENABLED || mode === 'register' ? 'email' : 'text'}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete={SUPABASE_ENABLED || mode === 'register' ? 'email' : 'username'}
-                placeholder={SUPABASE_ENABLED || mode === 'register' ? 'nama@email.com' : 'contoh: admin'}
-                required
-              />
-            </div>
-            <div>
-              <label className="label">Password</label>
-              <input
-                type="password"
-                className="input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            <button type="submit" className="btn-primary w-full justify-center" disabled={loading || registerLoading}>
-              {mode === 'register' ? (registerLoading ? 'Mendaftar…' : 'Daftar') : (loading ? 'Memproses…' : 'Masuk')}
-            </button>
-          </form>
 
-          {/* Toggle Login/Register — hanya di mode Supabase */}
-          {SUPABASE_ENABLED && (
-            <p className="text-sm text-slate-500 text-center mt-4">
-              {mode === 'login' ? (
-                <>Belum punya akun?{' '}
-                  <button type="button" onClick={() => { setMode('register'); setUsername(''); setPassword(''); setRegisterNama('') }} className="text-toska-700 font-medium hover:underline">
-                    Daftar sekarang
-                  </button>
-                </>
-              ) : (
-                <>Sudah punya akun?{' '}
-                  <button type="button" onClick={() => { setMode('login'); setRegisterNama('') }} className="text-toska-700 font-medium hover:underline">
-                    Masuk
-                  </button>
-                </>
-              )}
-            </p>
+              <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-xs text-slate-500 mb-2">ℹ️ <strong>Cara aktivasi:</strong></p>
+                <ol className="text-xs text-slate-600 list-decimal list-inside space-y-1">
+                  <li>Dapatkan kode aktivasi dari admin Pokjawas</li>
+                  <li>Masukkan kode di atas, klik <strong>Aktivasi & Masuk</strong></li>
+                  <li>Akun otomatis dibuat dan langsung login</li>
+                </ol>
+              </div>
+            </>
           )}
 
-          {!SUPABASE_ENABLED && mode === 'login' && (
-            <div className="mt-7">
-              <p className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-2">Akun Demo</p>
-              <div className="grid grid-cols-2 gap-2">
-                {DEMO.map((d) => (
+          {/* ---- Mode: Login ---- */}
+          {(mode === 'login') && (
+            <>
+              <h2 className="text-xl font-semibold text-navy-900">Masuk ke Aplikasi</h2>
+              <p className="text-sm text-slate-500 mb-6">
+                Gunakan akun yang diberikan admin Pokjawas.
+              </p>
+
+              <form onSubmit={submit} className="space-y-4">
+                <div>
+                  <label className="label">{SUPABASE_ENABLED ? 'Email' : 'Username'}</label>
+                  <input
+                    className="input"
+                    type={SUPABASE_ENABLED ? 'email' : 'text'}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    autoComplete={SUPABASE_ENABLED ? 'email' : 'username'}
+                    placeholder={SUPABASE_ENABLED ? 'nama@email.com' : 'contoh: admin'}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Password</label>
+                  <input
+                    type="password"
+                    className="input"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn-primary w-full justify-center" disabled={loading}>
+                  {loading ? 'Memproses…' : 'Masuk'}
+                </button>
+              </form>
+
+              {/* Tombol Aktivasi — mode Supabase */}
+              {SUPABASE_ENABLED && (
+                <div className="text-center mt-4">
                   <button
-                    key={d.user}
                     type="button"
-                    onClick={() => fillDemo(d.user, d.pass)}
-                    className="text-left rounded-lg border border-slate-200 hover:border-toska-400 hover:bg-toska-50 px-3 py-2 transition"
+                    onClick={() => { setMode('activate'); setActivationCode(''); setActivationError('') }}
+                    className="btn-primary w-full justify-center bg-toska-600 hover:bg-toska-700"
                   >
-                    <p className="text-xs text-slate-500">{d.role}</p>
-                    <p className="text-sm font-mono text-navy-900">{d.user} / {d.pass}</p>
+                    🔑 Aktivasi Akun Baru
                   </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {SUPABASE_ENABLED && (
-            <p className="text-xs text-slate-500 mt-6">
-              Akun terhubung ke Supabase Auth. Jika belum punya akun, hubungi admin Pokjawas untuk diundang.
-            </p>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Belum punya akun? Gunakan kode aktivasi dari admin.
+                  </p>
+                </div>
+              )}
+
+              {/* Akun Demo — mode lokal */}
+              {!SUPABASE_ENABLED && (
+                <div className="mt-7">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-2">Akun Demo</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {DEMO.map((d) => (
+                      <button
+                        key={d.user}
+                        type="button"
+                        onClick={() => fillDemo(d.user, d.pass)}
+                        className="text-left rounded-lg border border-slate-200 hover:border-toska-400 hover:bg-toska-50 px-3 py-2 transition"
+                      >
+                        <p className="text-xs text-slate-500">{d.role}</p>
+                        <p className="text-sm font-mono text-navy-900">{d.user} / {d.pass}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {SUPABASE_ENABLED && (
+                <p className="text-xs text-slate-500 mt-6">
+                  ⚠️ Akun dibuat melalui kode aktivasi dari admin.<br />
+                  Klik <strong>Aktivasi Akun Baru</strong> untuk registrasi.
+                </p>
+              )}
+            </>
           )}
 
-          {/* License section — selalu tampil, user bisa upgrade/downgrade dari sini */}
+          {/* Lisensi & Aktivasi Manual */}
           <div className="mt-6 pt-4 border-t border-slate-200">
             {/* Status lisensi saat ini */}
             {isTrial && (
@@ -321,7 +338,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Form aktivasi — selalu tersedia */}
+            {/* Form aktivasi kode lisensi (manual) — tersedia di semua mode */}
             <p className="text-xs text-slate-500 mb-2 text-center">
               {license && !isTrial && !licenseExpired
                 ? 'Ingin ganti kode lisensi?'
@@ -345,7 +362,7 @@ export default function LoginPage() {
                 onClick={() => { setShowActivation(!showActivation); setActivationError('') }}
                 className="text-sm px-4 py-2 rounded-lg bg-navy-900 text-white hover:bg-navy-800 font-medium"
               >
-                🔑 Aktivasi
+                🔑 Aktivasi Lisensi
               </button>
             </div>
 
