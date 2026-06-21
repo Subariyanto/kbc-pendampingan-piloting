@@ -58,8 +58,12 @@ export async function registerWithEmailAndCode({ email, password, nama, code }) 
   // 1. Master code → skip Supabase, langsung lisensi (akun tetap dibuat di Supabase)
   let activationData = null
   if (cleanCode === MASTER_CODE) {
-    // Master code: role admin default
-    activationData = { role: 'admin', nama: cleanNama, pengawas_id: null, madrasah_id: null }
+    // Master code: role admin default, tier pro lifetime
+    activationData = {
+      role: 'admin', nama: cleanNama,
+      pengawas_id: null, madrasah_id: null,
+      tier: 'pro', validity_days: 0
+    }
   } else {
     // 2. Cek kode di tabel activation_codes
     const found = await lookupActivationCode(cleanCode)
@@ -112,8 +116,15 @@ export async function registerWithEmailAndCode({ email, password, nama, code }) 
     session = loginData?.session
   }
 
-  // 5. Simpan lisensi
-  saveLicense(cleanCode, 'pro', { via: 'supabase', role: activationData.role })
+  // 5. Simpan lisensi sesuai tier kode
+  const tier = activationData.tier || 'pro'
+  const days = Number(activationData.validity_days) || 0
+  saveLicense(cleanCode, tier, {
+    via: 'supabase',
+    role: activationData.role,
+    validityDays: days,
+    expiresAt: days > 0 ? Date.now() + days * 86400000 : 0
+  })
 
   return {
     ok: true,
@@ -121,6 +132,8 @@ export async function registerWithEmailAndCode({ email, password, nama, code }) 
     nama: cleanNama,
     role: activationData.role,
     email: cleanEmail,
+    tier,
+    validityDays: days,
     message: `Pendaftaran berhasil! Selamat datang, ${cleanNama}.`
   }
 }

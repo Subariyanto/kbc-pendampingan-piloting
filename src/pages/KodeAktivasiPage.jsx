@@ -191,6 +191,7 @@ export default function KodeAktivasiPage() {
                   <th>Kode</th>
                   <th>Untuk (Nama)</th>
                   <th>Role</th>
+                  <th>Tier</th>
                   <th>Status</th>
                   <th>Dibuat</th>
                   <th className="text-right">Aksi</th>
@@ -291,6 +292,17 @@ function CodeRow({ code, onCopy, onDelete, onReset }) {
         </span>
       </td>
       <td>
+        {code.tier === 'demo' ? (
+          <span className="inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 text-xs font-medium" title={`Trial ${code.validityDays || 0} hari sejak aktivasi`}>
+            ⏳ Trial {code.validityDays || 0}h
+          </span>
+        ) : (
+          <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-medium">
+            ♾️ Pro
+          </span>
+        )}
+      </td>
+      <td>
         {code.used ? (
           <div>
             <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-medium">
@@ -331,13 +343,24 @@ function CreateCodeModal({ pengawasList, madrasahList, onClose, onSaved }) {
     nama: '',
     pengawasId: '',
     madrasahId: '',
-    note: ''
+    note: '',
+    tier: 'pro',
+    validityDays: 0
   })
   const [bulkMode, setBulkMode] = useState(false)
   const [bulkCount, setBulkCount] = useState(5)
   const [saving, setSaving] = useState(false)
 
   const update = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+
+  // Sinkron tier ↔ validityDays default
+  const setTier = (tier) => {
+    setForm({
+      ...form,
+      tier,
+      validityDays: tier === 'demo' ? (form.validityDays > 0 ? form.validityDays : 7) : 0
+    })
+  }
 
   const onRegenerate = () => {
     setForm({ ...form, code: generateRandomCode() })
@@ -360,6 +383,10 @@ function CreateCodeModal({ pengawasList, madrasahList, onClose, onSaved }) {
 
     setSaving(true)
     try {
+      const tierPayload = {
+        tier: form.tier,
+        validityDays: form.tier === 'demo' ? (Number(form.validityDays) || 7) : 0
+      }
       if (bulkMode) {
         const count = Math.min(50, Math.max(1, parseInt(bulkCount) || 1))
         let successCount = 0
@@ -371,7 +398,8 @@ function CreateCodeModal({ pengawasList, madrasahList, onClose, onSaved }) {
               nama: count > 1 ? `${form.nama} ${i + 1}` : form.nama,
               pengawasId: form.pengawasId || null,
               madrasahId: form.madrasahId || null,
-              note: form.note
+              note: form.note,
+              ...tierPayload
             })
             successCount++
           } catch (err) {
@@ -386,7 +414,8 @@ function CreateCodeModal({ pengawasList, madrasahList, onClose, onSaved }) {
           nama: form.nama,
           pengawasId: form.pengawasId || null,
           madrasahId: form.madrasahId || null,
-          note: form.note
+          note: form.note,
+          ...tierPayload
         })
         toast.success('Kode aktivasi diterbitkan')
       }
@@ -478,6 +507,39 @@ function CreateCodeModal({ pengawasList, madrasahList, onClose, onSaved }) {
             <option value="viewer">Viewer (Read Only)</option>
           </select>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Tier</label>
+            <select className="input" value={form.tier} onChange={(e) => setTier(e.target.value)}>
+              <option value="pro">Pro — Lifetime</option>
+              <option value="demo">Trial — Masa Berlaku Terbatas</option>
+            </select>
+          </div>
+          {form.tier === 'demo' && (
+            <div>
+              <label className="label">Masa Berlaku (hari)</label>
+              <input
+                className="input"
+                type="number"
+                min="1"
+                max="365"
+                value={form.validityDays}
+                onChange={update('validityDays')}
+                placeholder="7"
+              />
+            </div>
+          )}
+        </div>
+        {form.tier === 'demo' ? (
+          <p className="text-xs text-amber-700 -mt-1">
+            ⏳ User akan otomatis logout & lisensi expired setelah {Number(form.validityDays) || 7} hari sejak aktivasi.
+          </p>
+        ) : (
+          <p className="text-xs text-emerald-700 -mt-1">
+            ♾️ Kode Pro = akses selamanya, tidak ada expired.
+          </p>
+        )}
 
         <div>
           <label className="label">{bulkMode ? 'Nama Dasar (akan diberi suffix #1, #2, …)' : 'Nama Pemilik Kode'}</label>

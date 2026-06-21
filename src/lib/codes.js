@@ -28,12 +28,10 @@ export function getStoredLicense() {
     if (!raw) return null
     const parsed = JSON.parse(raw)
     if (!parsed || !parsed.code || !parsed.activatedAt) return null
-    // Cek expiry (demo tier)
-    if (parsed.tier === 'demo' && parsed.expiresAt) {
-      if (Date.now() > parsed.expiresAt) {
-        localStorage.removeItem(STORAGE_KEY)
-        return null
-      }
+    // Cek expiry (semua tier yang punya expiresAt > 0)
+    if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
     }
     return parsed
   } catch {
@@ -42,9 +40,12 @@ export function getStoredLicense() {
 }
 
 export function saveLicense(code, tier, deviceInfo = {}) {
-  const expiresAt = TIER_DAYS[tier]
-    ? Date.now() + TIER_DAYS[tier] * 86400000
-    : 0
+  // Kalau deviceInfo punya expiresAt eksplisit, pakai itu (override TIER_DAYS).
+  // Default: hitung dari TIER_DAYS map.
+  const explicitExpiry = Number(deviceInfo?.expiresAt) || 0
+  const expiresAt = explicitExpiry > 0
+    ? explicitExpiry
+    : (TIER_DAYS[tier] ? Date.now() + TIER_DAYS[tier] * 86400000 : 0)
   const license = {
     code,
     tier: tier || 'pro',

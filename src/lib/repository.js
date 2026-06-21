@@ -297,6 +297,8 @@ export async function listActivationCodes() {
     nama: c.nama,
     pengawasId: c.pengawas_id,
     madrasahId: c.madrasah_id,
+    tier: c.tier || 'pro',
+    validityDays: c.validity_days ?? 0,
     used: c.used,
     usedBy: c.used_by,
     usedAt: c.used_at,
@@ -305,7 +307,7 @@ export async function listActivationCodes() {
   }))
 }
 
-export async function createActivationCode({ code, role, nama, pengawasId, madrasahId, note }) {
+export async function createActivationCode({ code, role, nama, pengawasId, madrasahId, note, tier, validityDays }) {
   if (!supabase) throw new Error('Supabase belum dikonfigurasi')
   const payload = {
     code: String(code).trim().toUpperCase(),
@@ -314,7 +316,9 @@ export async function createActivationCode({ code, role, nama, pengawasId, madra
     pengawas_id: pengawasId || null,
     madrasah_id: madrasahId || null,
     note: note || null,
-    used: false
+    used: false,
+    tier: tier || 'pro',
+    validity_days: Number.isFinite(+validityDays) ? +validityDays : 0
   }
   const { data, error } = await supabase.from('activation_codes').insert(payload).select().single()
   if (error) throw error
