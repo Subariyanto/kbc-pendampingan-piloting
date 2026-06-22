@@ -73,7 +73,16 @@ export function AuthProvider({ children }) {
         .maybeSingle()
       if (error) {
         console.error('Load profile error:', error)
-        setUser({ id: session.user.id, nama: session.user.email, role: 'viewer' })
+        // Fallback: ambil role dari user_metadata (di-set saat signUp)
+        const meta = session.user.user_metadata || {}
+        setUser({
+          id: session.user.id,
+          username: session.user.email,
+          nama: meta.nama || session.user.email,
+          role: meta.role || 'pengawas',
+          pengawasId: meta.pengawas_id || null,
+          madrasahId: meta.madrasah_id || null
+        })
         return
       }
       if (data) {
@@ -82,8 +91,16 @@ export function AuthProvider({ children }) {
           role: data.role, pengawasId: data.pengawas_id, madrasahId: data.madrasah_id
         })
       } else {
-        // Trigger biasanya sudah bikin profile. Fallback: set viewer minimal.
-        setUser({ id: session.user.id, nama: session.user.email, role: 'viewer' })
+        // Profile belum ada (trigger handle_new_user gagal). Fallback ke metadata signUp.
+        const meta = session.user.user_metadata || {}
+        setUser({
+          id: session.user.id,
+          username: session.user.email,
+          nama: meta.nama || session.user.email,
+          role: meta.role || 'pengawas',
+          pengawasId: meta.pengawas_id || null,
+          madrasahId: meta.madrasah_id || null
+        })
       }
     }
 
