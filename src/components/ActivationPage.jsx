@@ -1,6 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { saveLicense, MASTER_CODE } from '../lib/codes.js'
 import { verifySignedCode } from '../lib/signedLicense.js'
+import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
+
+const DEVICE_FP_KEY = 'kbc_device_fp_v1'
+
+// Generate / load device fingerprint stabil di browser ini.
+// Kombinasi random ID + UA + screen size, simpan di localStorage.
+function getDeviceFingerprint() {
+  try {
+    let fp = localStorage.getItem(DEVICE_FP_KEY)
+    if (fp) return fp
+    const rand = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)
+    const ua = (navigator.userAgent || '').slice(0, 80)
+    const screen = `${window.screen?.width || 0}x${window.screen?.height || 0}`
+    fp = `${rand}-${btoa(ua + '|' + screen).slice(0, 24)}`.replace(/[^a-zA-Z0-9-]/g, '')
+    localStorage.setItem(DEVICE_FP_KEY, fp)
+    return fp
+  } catch {
+    return 'fp-' + Math.random().toString(36).slice(2)
+  }
+}
 
 export default function ActivationPage({ onActivated }) {
   const [code, setCode] = useState('')
@@ -8,18 +28,18 @@ export default function ActivationPage({ onActivated }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const setupLocalAdmin = (namaUser) => {
-    const adminUser = {
-      id: 'local-admin-' + Date.now(),
-      username: 'admin',
-      nama: namaUser || 'Pengawas',
-      role: 'admin',
+  const setupLocalUser = (namaUser, role = 'pengawas') => {
+    const userObj = {
+      id: 'local-' + role + '-' + Date.now(),
+      username: role,
+      nama: namaUser || 'Pengguna',
+      role,
       pengawasId: null,
       madrasahId: null,
-      isLocalAdmin: true
+      isLocalAdmin: role === 'admin'
     }
     try {
-      localStorage.setItem('kbc_local_user_v1', JSON.stringify(adminUser))
+      localStorage.setItem('kbc_local_user_v1', JSON.stringify(userObj))
     } catch {}
   }
 
@@ -43,13 +63,15 @@ export default function ActivationPage({ onActivated }) {
       let validatedTier = null
       let validatedExpiresAt = 0
       let licenseLabel = ''
+      let userRole = 'pengawas' // default customer = pengawas
 
-      // 1. Master code
+      // 1. Master code: admin penuh, no single-use check
       if (cleanCode === MASTER_CODE) {
         validatedTier = 'pro'
         licenseLabel = 'Master (Owner)'
+        userRole = 'admin'
       } else {
-        // 2. Verifikasi signed code (offline, HMAC)
+        // 2. Verifikasi signature HMAC offline
         const result = await verifySignedCode(cleanCode)
         if (!result.valid) {
           setError(result.error || 'Kode aktivasi tidak valid')
@@ -61,16 +83,41 @@ export default function ActivationPage({ onActivated }) {
         if (result.expiryDays > 0) {
           validatedExpiresAt = Date.now() + result.expiryDays * 86400000
         }
+
+        // 3. Single-use check via Supabase RPC (kalau Supabase tersedia)
+        if (SUPABASE_ENABLED) {
+          const fp = getDeviceFingerprint()
+          try {
+            const { data, error: rpcErr } = await supabase.rpc('claim_signed_code', {
+              p_code: cleanCode,
+              p_device_fp: fp,
+              p_nama: cleanNama,
+              p_tier: result.tier
+            })
+            if (rpcErr) {
+              // Kalau RPC belum di-deploy, fallback warn tapi tetap allow (degraded)
+              console.warn('claim_signed_code RPC error, allow tanpa single-use check:', rpcErr.message)
+            } else if (data && data.ok === false) {
+              setError(data.error || 'Kode tidak bisa dipakai')
+              setLoading(false)
+              return
+            }
+          } catch (rpcCatchErr) {
+            console.warn('RPC claim_signed_code failed:', rpcCatchErr)
+            // Allow degraded mode (kalau Supabase down, jangan block customer)
+          }
+        }
       }
 
-      // 3. Simpan lisensi + setup admin lokal
+      // 4. Simpan lisensi + setup user lokal
       saveLicense(cleanCode, validatedTier, {
         via: 'signed-license',
         label: licenseLabel,
         expiresAt: validatedExpiresAt,
-        nama: cleanNama
+        nama: cleanNama,
+        role: userRole
       })
-      setupLocalAdmin(cleanNama)
+      setupLocalUser(cleanNama, userRole)
       onActivated({ code: cleanCode, tier: validatedTier })
       setTimeout(() => window.location.reload(), 100)
     } catch (err) {
@@ -84,13 +131,14 @@ export default function ActivationPage({ onActivated }) {
   const handleTrial = () => {
     saveLicense('TRIAL-AUTO', 'demo', {
       label: 'Trial 5 Hari',
-      expiresAt: Date.now() + 5 * 86400000
+      expiresAt: Date.now() + 5 * 86400000,
+      role: 'pengawas'
     })
-    setupLocalAdmin('Pengguna Trial')
+    setupLocalUser('Pengguna Trial', 'pengawas')
     try {
       localStorage.setItem('kbc_trial_user_v1', JSON.stringify({
         id: 'trial-user', username: 'trial', nama: 'Pengguna Trial',
-        role: 'admin', isTrial: true
+        role: 'pengawas', isTrial: true
       }))
     } catch {}
     onActivated({ code: 'TRIAL-AUTO', tier: 'demo' })
@@ -169,7 +217,7 @@ export default function ActivationPage({ onActivated }) {
           </button>
 
           <p className="text-xs text-slate-500 text-center leading-relaxed">
-            Data tersimpan di browser ini saja. Bisa backup ke file JSON di menu Pengaturan untuk pindah device.
+            Kode aktivasi terikat ke 1 device. Untuk pindah device, gunakan menu Pengaturan → Backup & Restore JSON.
           </p>
 
           <p className="text-xs text-slate-400 text-center">
