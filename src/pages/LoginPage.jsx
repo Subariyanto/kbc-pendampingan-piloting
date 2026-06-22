@@ -176,8 +176,12 @@ export default function LoginPage() {
   }
 
   const handleClearLicense = () => {
-    if (confirm('Hapus lisensi yang tersimpan? Anda akan diarahkan ke halaman aktivasi.')) {
+    if (confirm('Hapus lisensi & trial state yang tersimpan? Aplikasi akan reload.')) {
       clearLicense()
+      try {
+        localStorage.removeItem('kbc_trial_user_v1')
+        localStorage.removeItem('kbc_auth_v1')
+      } catch {}
       window.location.reload()
     }
   }
@@ -485,6 +489,18 @@ export default function LoginPage() {
               <a href="https://wa.me/6282330647698" target="_blank" rel="noreferrer" className="text-toska-700 hover:underline">
                 Hubungi Admin
               </a>
+            </p>
+
+            {/* Reset state — kalau login nyangkut karena trial state lama */}
+            <p className="text-[10px] text-slate-400 text-center mt-1">
+              Login bermasalah?{' '}
+              <button
+                type="button"
+                onClick={handleClearLicense}
+                className="text-rose-600 hover:underline"
+              >
+                Reset lisensi & trial state
+              </button>
             </p>
           </div>
         </div>
