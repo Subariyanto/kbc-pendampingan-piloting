@@ -116,7 +116,7 @@ export default function App() {
                   <Route
                     path="/pengaturan"
                     element={
-                      <PrivateRoute allowed={['admin']}>
+                      <PrivateRoute allowed={['admin', 'pengawas']}>
                         <PengaturanPage />
                       </PrivateRoute>
                     }

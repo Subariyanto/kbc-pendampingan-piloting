@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/laporan', label: 'Laporan', icon: '📊', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/pembelian', label: 'Pengaturan Pembelian', icon: '💳', roles: ['admin'] },
-  { to: '/pengaturan', label: 'Pengaturan', icon: '⚙️', roles: ['admin'] },
+  { to: '/pengaturan', label: 'Pengaturan', icon: '⚙️', roles: ['admin', 'pengawas'] },
   { to: '/pengguna', label: 'Kelola Pengguna', icon: '👥', roles: ['admin'] },
   { to: '/kode-aktivasi', label: 'Kode Aktivasi', icon: '🎫', roles: ['admin'] },
   // Menu Lisensi (legacy mode lokal) disembunyikan; page tetap accessible via URL.
