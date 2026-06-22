@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
-import { validateCode, saveLicense, fetchRemoteCodes, saveLocalCodes, tryLoadLocalCodes, MASTER_CODE } from '../lib/codes.js'
-import { lookupActivationCode } from '../lib/activation.js'
-import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
-import { LOCAL_ONLY_MODE } from '../lib/appMode.js'
+import { saveLicense, MASTER_CODE } from '../lib/codes.js'
+import { verifySignedCode } from '../lib/signedLicense.js'
 
 export default function ActivationPage({ onActivated }) {
   const [code, setCode] = useState('')
@@ -10,15 +8,7 @@ export default function ActivationPage({ onActivated }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Fetch remote codes once (untuk fallback offline)
-  useEffect(() => {
-    fetchRemoteCodes().then((codes) => {
-      if (Array.isArray(codes)) saveLocalCodes(codes)
-    }).catch(() => {})
-  }, [])
-
   const setupLocalAdmin = (namaUser) => {
-    // Bikin user lokal di localStorage tanpa registrasi Supabase
     const adminUser = {
       id: 'local-admin-' + Date.now(),
       username: 'admin',
@@ -52,86 +42,51 @@ export default function ActivationPage({ onActivated }) {
     try {
       let validatedTier = null
       let validatedExpiresAt = 0
+      let licenseLabel = ''
 
-      // 1. Master code: skip validasi server
+      // 1. Master code
       if (cleanCode === MASTER_CODE) {
         validatedTier = 'pro'
-      } else if (LOCAL_ONLY_MODE && SUPABASE_ENABLED) {
-        // 2. Mode lokal + Supabase tersedia: klaim kode via RPC atomik.
-        const { data, error: rpcErr } = await supabase.rpc('claim_activation_code', {
-          p_code: cleanCode,
-          p_nama: cleanNama
-        })
-        if (rpcErr) {
-          // Fallback: kalau RPC belum di-deploy, pakai cara lama (select + update)
-          console.warn('claim_activation_code RPC error, fallback:', rpcErr.message)
-          const found = await lookupActivationCode(cleanCode)
-          if (!found) {
-            setError('Kode aktivasi tidak ditemukan')
-            setLoading(false)
-            return
-          }
-          if (found.used) {
-            setError('Kode aktivasi sudah digunakan')
-            setLoading(false)
-            return
-          }
-          validatedTier = found.tier || 'pro'
-          const days = Number(found.validity_days) || 0
-          validatedExpiresAt = days > 0 ? Date.now() + days * 86400000 : 0
-          try {
-            await supabase.from('activation_codes').update({
-              used: true,
-              used_at: new Date().toISOString(),
-              used_by_nama: cleanNama
-            }).eq('code', cleanCode)
-          } catch (e) { console.warn('mark used gagal:', e) }
-        } else if (data?.ok === false) {
-          setError(data.error || 'Kode aktivasi tidak valid')
-          setLoading(false)
-          return
-        } else {
-          validatedTier = data?.tier || 'pro'
-          const days = Number(data?.validity_days) || 0
-          validatedExpiresAt = days > 0 ? Date.now() + days * 86400000 : 0
-        }
+        licenseLabel = 'Master (Owner)'
       } else {
-        // 3. Fallback bundled codes (offline)
-        let bundledCodes = tryLoadLocalCodes()
-        try {
-          const remote = await fetchRemoteCodes()
-          if (Array.isArray(remote)) { bundledCodes = remote; saveLocalCodes(remote) }
-        } catch {}
-        const result = validateCode(cleanCode, bundledCodes)
+        // 2. Verifikasi signed code (offline, HMAC)
+        const result = await verifySignedCode(cleanCode)
         if (!result.valid) {
           setError(result.error || 'Kode aktivasi tidak valid')
           setLoading(false)
           return
         }
         validatedTier = result.tier
+        licenseLabel = result.label
+        if (result.expiryDays > 0) {
+          validatedExpiresAt = Date.now() + result.expiryDays * 86400000
+        }
       }
 
-      // 4. Simpan lisensi + setup admin lokal
+      // 3. Simpan lisensi + setup admin lokal
       saveLicense(cleanCode, validatedTier, {
-        via: 'local-activation',
-        expiresAt: validatedExpiresAt
+        via: 'signed-license',
+        label: licenseLabel,
+        expiresAt: validatedExpiresAt,
+        nama: cleanNama
       })
       setupLocalAdmin(cleanNama)
       onActivated({ code: cleanCode, tier: validatedTier })
-      // Reload supaya state lama (auth, dll) bersih dan masuk sebagai user lokal baru
       setTimeout(() => window.location.reload(), 100)
     } catch (err) {
       console.error(err)
-      setError('Gagal memvalidasi kode: ' + (err.message || 'cek koneksi internet'))
+      setError('Gagal memvalidasi kode: ' + (err.message || 'unknown error'))
     } finally {
       setLoading(false)
     }
   }
 
   const handleTrial = () => {
-    saveLicense('TRIAL-AUTO', 'demo', {})
+    saveLicense('TRIAL-AUTO', 'demo', {
+      label: 'Trial 5 Hari',
+      expiresAt: Date.now() + 5 * 86400000
+    })
     setupLocalAdmin('Pengguna Trial')
-    // Setup juga trial flag (untuk watermark TRIAL di dokumen cetak)
     try {
       localStorage.setItem('kbc_trial_user_v1', JSON.stringify({
         id: 'trial-user', username: 'trial', nama: 'Pengguna Trial',
@@ -143,7 +98,7 @@ export default function ActivationPage({ onActivated }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-800 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-800 px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-toska-500/20 ring-4 ring-toska-400/10 mb-4">
@@ -173,8 +128,8 @@ export default function ActivationPage({ onActivated }) {
           <div>
             <label className="label text-navy-900">Kode Aktivasi</label>
             <input
-              className="input text-center text-lg tracking-widest font-mono uppercase"
-              placeholder="KBC-XXXX-XXXX"
+              className="input text-center text-base tracking-wider font-mono uppercase"
+              placeholder="KBC-PRO-XXXXXXXX-XXXXXX-XXXXXXXXXXXX"
               value={code}
               onChange={(e) => { setCode(e.target.value.toUpperCase()); setError('') }}
               autoComplete="off"
@@ -214,7 +169,7 @@ export default function ActivationPage({ onActivated }) {
           </button>
 
           <p className="text-xs text-slate-500 text-center leading-relaxed">
-            Data Bapak/Ibu tersimpan di browser ini saja. Tidak dibagi dengan pengawas lain.
+            Data tersimpan di browser ini saja. Bisa backup ke file JSON di menu Pengaturan untuk pindah device.
           </p>
 
           <p className="text-xs text-slate-400 text-center">
