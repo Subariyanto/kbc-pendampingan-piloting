@@ -4,6 +4,9 @@ import { ConfirmDialog } from '../components/Modal.jsx'
 import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { downloadJSON, readFileAsDataURL, readJSONFile } from '../lib/utils.js'
+import { SUPABASE_ENABLED } from '../lib/supabase.js'
+import { LOCAL_ONLY_MODE } from '../lib/appMode.js'
+import { loadSnapshot } from '../lib/repository.js'
 
 export default function PengaturanPage() {
   const { state, updateSettings, resetAll, restoreAll } = useData()
@@ -13,6 +16,21 @@ export default function PengaturanPage() {
   const [confirmRestore, setConfirmRestore] = useState(null)
   const fileRestore = useRef(null)
   const fileLogo = useRef(null)
+
+  const [migrating, setMigrating] = useState(false)
+  const [confirmMigrate, setConfirmMigrate] = useState(null)
+
+  const onMigrateFromSupabase = async () => {
+    setMigrating(true)
+    try {
+      const snapshot = await loadSnapshot()
+      setConfirmMigrate(snapshot)
+    } catch (err) {
+      toast.error('Gagal ambil data Supabase: ' + err.message)
+    } finally {
+      setMigrating(false)
+    }
+  }
 
   const upd = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -106,6 +124,28 @@ export default function PengaturanPage() {
         <p className="text-xs text-slate-500 mt-2">Total disarankan 100%. Bobot dipakai untuk laporan rata-rata tertimbang ke depan.</p>
       </div>
 
+      {LOCAL_ONLY_MODE && SUPABASE_ENABLED && (
+        <div className="card-pad mb-4 border-2 border-amber-200 bg-amber-50/40">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">📥</span>
+            <div className="flex-1">
+              <p className="font-semibold text-navy-900">Migrasi Data dari Supabase</p>
+              <p className="text-sm text-slate-600 mt-1">
+                Tarik data madrasah, pengawas, jadwal, dan lainnya dari database Supabase lama ke localStorage browser ini. Hanya perlu sekali kalau Bapak migrasi dari mode online.
+              </p>
+              <div className="flex gap-2 mt-3">
+                <button className="btn-toska" onClick={onMigrateFromSupabase} disabled={migrating}>
+                  {migrating ? 'Mengambil data…' : '⬇ Tarik Data dari Supabase'}
+                </button>
+              </div>
+              <p className="text-xs text-amber-700 mt-2">
+                ⚠️ Setelah migrasi, data lokal saat ini akan diganti dengan data dari Supabase. Backup dulu kalau ada perubahan yang mau dipertahankan.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="card-pad mb-4">
         <p className="font-semibold text-navy-900 mb-3">Backup &amp; Restore Data</p>
         <p className="text-sm text-slate-600 mb-3">Backup mencakup seluruh data: madrasah, pengawas, jadwal, instrumen, pendampingan, eviden, tindak lanjut, dan pengaturan.</p>
@@ -139,6 +179,24 @@ export default function PengaturanPage() {
         confirmText="Restore"
         tone="primary"
         message="Data saat ini akan diganti dengan isi file backup. Yakin melanjutkan?"
+      />
+      <ConfirmDialog
+        open={!!confirmMigrate}
+        onClose={() => setConfirmMigrate(null)}
+        onConfirm={() => {
+          try {
+            restoreAll(confirmMigrate)
+            toast.success('Data Supabase berhasil dimigrasi ke browser ini')
+            setConfirmMigrate(null)
+          } catch (err) { toast.error(err.message) }
+        }}
+        title="Migrasi Data Supabase"
+        confirmText="Migrasi Sekarang"
+        tone="primary"
+        message={confirmMigrate
+          ? `Data lokal akan diganti dengan: ${confirmMigrate.madrasah?.length || 0} madrasah, ${confirmMigrate.pengawas?.length || 0} pengawas, ${confirmMigrate.jadwal?.length || 0} jadwal, ${confirmMigrate.pendampingan?.length || 0} pendampingan. Lanjutkan?`
+          : ''
+        }
       />
     </>
   )
