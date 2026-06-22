@@ -11,8 +11,6 @@ const NAV_ITEMS = [
   { to: '/jadwal', label: 'Jadwal Pendampingan', icon: '🗓️', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/instrumen', label: 'Instrumen KBC', icon: '📋', roles: ['admin', 'pengawas', 'viewer'] },
   { to: '/pendampingan', label: 'Hasil Pendampingan', icon: '📝', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/jurnal-pembiasaan', label: 'Jurnal Pembiasaan Harian', icon: '📔', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/observasi-karakter', label: 'Observasi Karakter Murid', icon: '🧒', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/laporan', label: 'Laporan', icon: '📊', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
