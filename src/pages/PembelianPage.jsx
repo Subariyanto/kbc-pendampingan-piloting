@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useToast } from '../context/ToastContext.jsx'
-
-const STORAGE_KEY = 'kbc_pendampingan_v1_pembelian'
+import { fetchPembelianInfo, savePembelianRemote } from '../lib/pembelian.js'
+import { SUPABASE_ENABLED } from '../lib/supabase.js'
 
 const DEFAULT = {
   wa: '6282330647698',
@@ -12,20 +12,44 @@ const DEFAULT = {
   bannerText: 'Hubungi Admin untuk pembelian lisensi'
 }
 
-function loadPembelian() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : DEFAULT
-  } catch { return DEFAULT }
-}
-
 export default function PembelianPage() {
   const toast = useToast()
-  const [pembelian, setPembelian] = useState(loadPembelian)
+  const [pembelian, setPembelian] = useState(DEFAULT)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  const handleSave = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(pembelian))
-    toast.success('Pengaturan pembelian disimpan!')
+  useEffect(() => {
+    let active = true
+    fetchPembelianInfo().then((info) => {
+      if (active) {
+        setPembelian(info)
+        setLoading(false)
+      }
+    }).catch(() => active && setLoading(false))
+    return () => { active = false }
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      if (SUPABASE_ENABLED) {
+        const result = await savePembelianRemote(pembelian)
+        if (!result.ok) {
+          toast.error('Gagal simpan ke server: ' + result.error)
+        } else {
+          toast.success('Pengaturan pembelian disimpan & tersinkron ke semua user')
+        }
+      } else {
+        // Mode lokal
+        const { savePembelianInfo } = await import('../lib/pembelian.js')
+        savePembelianInfo(pembelian)
+        toast.success('Pengaturan pembelian disimpan (mode lokal)')
+      }
+    } catch (err) {
+      toast.error('Gagal: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleChange = (field, value) => {
@@ -110,9 +134,12 @@ export default function PembelianPage() {
           />
         </div>
 
-        <button type="button" onClick={handleSave} className="btn-primary">
-          💾 Simpan Pengaturan
+        <button type="button" onClick={handleSave} className="btn-primary" disabled={saving || loading}>
+          {saving ? 'Menyimpan…' : '💾 Simpan Pengaturan'}
         </button>
+        {loading && (
+          <p className="text-xs text-slate-400 mt-2">Memuat data dari server…</p>
+        )}
       </div>
 
       {/* Preview */}
