@@ -45,7 +45,9 @@ export function useScope() {
       madrasahIds,
       pengawasIds,
       canEdit: role === 'admin' || role === 'pengawas',
-      canEditFull: role === 'admin' || (role === 'pengawas' && !isLinkedPengawas),
+      // Pengawas dapat akses penuh utk input/edit data (madrasah, pendampingan, eviden, dst).
+      // Khusus admin: ditambahi akses panel admin (Pengguna, Lisensi, dll) di sidebar.
+      canEditFull: role === 'admin' || role === 'pengawas',
       isViewer: role === 'viewer',
       filterByMadrasah,
       madrasah: state.madrasah.filter((m) => madrasahIds.includes(m.id)),
