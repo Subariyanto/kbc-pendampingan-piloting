@@ -10,10 +10,10 @@ export default function PembelianModal({ open, onClose }) {
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden my-4 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-br from-navy-900 to-toska-700 text-white p-6 relative">
+        <div className="bg-gradient-to-br from-navy-900 to-toska-700 text-white p-6 relative shrink-0">
           <button
             onClick={onClose}
             className="absolute top-3 right-3 text-white/70 hover:text-white text-xl w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center"
@@ -32,7 +32,7 @@ export default function PembelianModal({ open, onClose }) {
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {info.bannerText && (
             <p className="text-sm text-slate-700 leading-relaxed">
               {info.bannerText}
