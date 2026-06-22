@@ -3,6 +3,7 @@ import { STORAGE_KEY, uid } from '../lib/utils.js'
 import { buildSeedData } from '../lib/seed.js'
 import { buildDefaultInstrumen } from '../lib/constants.js'
 import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
+import { LOCAL_ONLY_MODE } from '../lib/appMode.js'
 import * as repo from '../lib/repository.js'
 
 // Cek trial mode: kalau ada lisensi tier=demo + trial user di localStorage,
@@ -17,7 +18,10 @@ function isTrialMode() {
   } catch { return false }
 }
 
-const USE_REMOTE = SUPABASE_ENABLED && !isTrialMode()
+// Data aplikasi pakai Supabase HANYA jika:
+// - LOCAL_ONLY_MODE = false (mode multi-tenant Supabase, dimatikan default)
+// - Bukan trial mode
+const USE_REMOTE = SUPABASE_ENABLED && !LOCAL_ONLY_MODE && !isTrialMode()
 
 const DataContext = createContext(null)
 

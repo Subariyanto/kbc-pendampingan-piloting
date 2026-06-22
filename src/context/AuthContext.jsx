@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useData } from './DataContext.jsx'
 import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
+import { LOCAL_ONLY_MODE } from '../lib/appMode.js'
 import { getStoredLicense } from '../lib/codes.js'
 
 const AUTH_KEY = 'kbc_auth_v1'
 const TRIAL_USER_KEY = 'kbc_trial_user_v1'
+const LOCAL_USER_KEY = 'kbc_local_user_v1'
 
 function loadTrialUser() {
   // Trial user hanya valid kalau lisensi tier=demo masih aktif
@@ -21,15 +23,35 @@ function loadTrialUser() {
   }
 }
 
+function loadLocalUser() {
+  // Local admin user (mode LOCAL_ONLY_MODE) hanya valid kalau lisensi masih aktif
+  if (!LOCAL_ONLY_MODE) return null
+  const lic = getStoredLicense()
+  if (!lic) return null
+  if (lic.expiresAt && Date.now() > lic.expiresAt) {
+    try { localStorage.removeItem(LOCAL_USER_KEY) } catch {}
+    return null
+  }
+  try {
+    const raw = localStorage.getItem(LOCAL_USER_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const { state } = useData()
   const [user, setUser] = useState(() => {
-    // Trial user override semua mode
+    // Local user (mode LOCAL_ONLY_MODE) override semua
+    const local = loadLocalUser()
+    if (local) return local
+    // Trial user override Supabase mode
     const trial = loadTrialUser()
     if (trial) return trial
-    if (SUPABASE_ENABLED) return null
+    if (SUPABASE_ENABLED && !LOCAL_ONLY_MODE) return null
     try {
       const raw = localStorage.getItem(AUTH_KEY)
       return raw ? JSON.parse(raw) : null
@@ -37,12 +59,14 @@ export function AuthProvider({ children }) {
       return null
     }
   })
-  const [authLoading, setAuthLoading] = useState(SUPABASE_ENABLED && !loadTrialUser())
+  const [authLoading, setAuthLoading] = useState(
+    SUPABASE_ENABLED && !LOCAL_ONLY_MODE && !loadTrialUser() && !loadLocalUser()
+  )
 
   // ----- Local mode: sync user dari users state -----
   useEffect(() => {
     if (SUPABASE_ENABLED || !user) return
-    if (user.isTrial) return // trial user tidak perlu sync ke state.users
+    if (user.isTrial || user.isLocalAdmin) return // local admin/trial tidak perlu sync ke state.users
     const found = state.users.find((u) => u.id === user.id)
     if (!found) {
       setUser(null)
@@ -58,7 +82,8 @@ export function AuthProvider({ children }) {
   // ----- Supabase mode: subscribe ke session + load profile -----
   useEffect(() => {
     if (!SUPABASE_ENABLED) return
-    if (user?.isTrial) { setAuthLoading(false); return }
+    if (LOCAL_ONLY_MODE) return // mode lokal: jangan subscribe ke Supabase auth
+    if (user?.isTrial || user?.isLocalAdmin) { setAuthLoading(false); return }
     let unsubscribed = false
 
     async function loadProfile(session) {
@@ -142,6 +167,15 @@ export function AuthProvider({ children }) {
   )
 
   const logout = useCallback(async () => {
+    // Local admin user (mode LOCAL_ONLY_MODE)
+    if (user?.isLocalAdmin) {
+      try {
+        localStorage.removeItem(LOCAL_USER_KEY)
+        localStorage.removeItem('kbc_license_v1')
+      } catch {}
+      setUser(null)
+      return
+    }
     // Trial user: hapus license + trial user, tidak panggil Supabase signOut
     if (user?.isTrial) {
       try {
@@ -151,7 +185,7 @@ export function AuthProvider({ children }) {
       setUser(null)
       return
     }
-    if (SUPABASE_ENABLED) {
+    if (SUPABASE_ENABLED && !LOCAL_ONLY_MODE) {
       await supabase.auth.signOut()
       setUser(null)
       return

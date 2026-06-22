@@ -21,9 +21,9 @@ import PembelianPage from './pages/PembelianPage.jsx'
 import KodeAktivasiPage from './pages/KodeAktivasiPage.jsx'
 import { getStoredLicense, saveLicense } from './lib/codes.js'
 import { SUPABASE_ENABLED, supabase } from './lib/supabase.js'
+import { LOCAL_ONLY_MODE } from './lib/appMode.js'
 
 // --- Gate: cek lisensi dari localStorage, redirect ke halaman aktivasi kalau belum ---
-// Admin (mode Supabase) auto-bypass aktivasi
 function ActivationGate({ children }) {
   const [ok, setOk] = useState(false)
   const [check, setCheck] = useState(false)
@@ -32,15 +32,18 @@ function ActivationGate({ children }) {
     const lic = getStoredLicense()
     if (lic) { setOk(true); setCheck(true); return }
 
-    // Bypass: kalau ada session Supabase valid (user sudah login), auto-aktivasi.
-    // Karena registrasi pakai kode aktivasi tervalidasi, akun ini sudah berhak akses.
+    // Mode lokal: tidak perlu cek Supabase auth — langsung tampilkan halaman aktivasi
+    if (LOCAL_ONLY_MODE) {
+      setCheck(true)
+      return
+    }
+
+    // Bypass mode multi-tenant: kalau ada session Supabase valid (user sudah login), auto-aktivasi.
     if (SUPABASE_ENABLED) {
       supabase.auth.getSession().then(async ({ data }) => {
         if (data?.session?.user) {
-          // Cek profile untuk dapat tier/expiry kalau ada di metadata
           const { data: profile } = await supabase
             .from('profiles').select('role').eq('id', data.session.user.id).maybeSingle()
-          // Set lisensi 'pro' default karena user sudah login via flow registrasi yang valid
           saveLicense(profile?.role === 'admin' ? 'ADMIN-BYPASS' : 'AUTH-BYPASS', 'pro', { via: 'auth-bypass' })
           setOk(true)
           setCheck(true)
