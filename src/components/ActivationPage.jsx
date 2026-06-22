@@ -53,11 +53,12 @@ export default function ActivationPage({ onActivated }) {
   const handleTrial = () => {
     saveLicense('TRIAL-AUTO', 'demo', {})
     // Set user trial otomatis (bypass form login)
+    // Role 'pengawas' supaya bisa eksplor fitur utama tanpa akses panel admin
     const trialUser = {
       id: 'trial-user',
       username: 'trial',
       nama: 'Pengguna Trial',
-      role: 'admin', // admin penuh selama trial supaya bisa eksplor semua menu
+      role: 'pengawas',
       pengawasId: null,
       madrasahId: null,
       isTrial: true
