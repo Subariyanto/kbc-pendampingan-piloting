@@ -40,9 +40,9 @@ export default function AppLayout({ children }) {
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar desktop */}
-      <aside className="hidden lg:flex w-64 flex-col bg-navy-950 text-white sticky top-0 h-screen no-print">
+      <aside className="hidden lg:flex w-64 flex-col bg-navy-950 text-white no-print">
         <Brand settings={settings} />
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1">
           {items.map((it) => (
             <SidebarItem key={it.to} {...it} />
           ))}
@@ -56,7 +56,7 @@ export default function AppLayout({ children }) {
           <div className="absolute inset-0 bg-navy-950/60" onClick={() => setOpen(false)} />
           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-navy-950 text-white flex flex-col">
             <Brand settings={settings} />
-            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+            <nav className="flex-1 px-3 py-4 space-y-1">
               {items.map((it) => (
                 <SidebarItem key={it.to} {...it} onClick={() => setOpen(false)} />
               ))}
