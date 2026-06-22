@@ -46,7 +46,6 @@ export default function LaporanPage() {
     if (tglAkhir && t > new Date(tglAkhir).getTime() + 24 * 60 * 60 * 1000 - 1) return false
     return true
   }
-
   const filteredMadrasah = useMemo(() => {
     return scope.madrasah
       .filter((m) => !filterJenjang || m.jenjang === filterJenjang)
@@ -104,6 +103,22 @@ export default function LaporanPage() {
         }
       })
   }, [state.pengawas, scope, filteredMadrasah, filteredPendampingan, state.instrumen])
+
+  // Tentukan pengawas pendamping untuk blok Tanda Tangan:
+  // 1. Filter Pengawas dipilih -> pakai itu
+  // 2. Report 'madrasah' -> pakai pengawas madrasah tersebut
+  // 3. Pendampingan yang ditampilkan semuanya dari 1 pengawas -> pakai dia
+  // 4. Lebih dari 1 pengawas / kosong -> null (fallback ke ketua pokjawas saja)
+  const pengawasTtd = useMemo(() => {
+    if (filterPengawas) return state.pengawas.find((p) => p.id === filterPengawas) || null
+    if (jenis === 'madrasah' && filterMadrasah) {
+      const m = state.madrasah.find((mm) => mm.id === filterMadrasah)
+      if (m?.pengawasId) return state.pengawas.find((p) => p.id === m.pengawasId) || null
+    }
+    const ids = Array.from(new Set(filteredPendampingan.map((p) => p.pengawasId).filter(Boolean)))
+    if (ids.length === 1) return state.pengawas.find((p) => p.id === ids[0]) || null
+    return null
+  }, [filterPengawas, filterMadrasah, jenis, filteredPendampingan, state.pengawas, state.madrasah])
 
   const exportCSV = () => {
     let rows = []
@@ -237,7 +252,11 @@ export default function LaporanPage() {
         {jenis === 'tindak' && <SectionTindakLanjut data={filteredTL} madrasah={state.madrasah} />}
         {jenis === 'eviden' && <SectionEviden data={filteredEviden} madrasah={state.madrasah} />}
 
-        <PrintSignature settings={state.settings} />
+        <PrintSignature
+          settings={state.settings}
+          namaPengawas={pengawasTtd?.nama || '____________________'}
+          nipPengawas={pengawasTtd?.nip}
+        />
         <p className="mt-4 text-xs text-slate-500">Dicetak {formatDateLong(new Date())}</p>
       </div>
     </>
