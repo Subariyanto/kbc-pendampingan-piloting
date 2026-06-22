@@ -1,13 +1,34 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useData } from './DataContext.jsx'
 import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
+import { getStoredLicense } from '../lib/codes.js'
 
 const AUTH_KEY = 'kbc_auth_v1'
+const TRIAL_USER_KEY = 'kbc_trial_user_v1'
+
+function loadTrialUser() {
+  // Trial user hanya valid kalau lisensi tier=demo masih aktif
+  const lic = getStoredLicense()
+  if (!lic || lic.tier !== 'demo') {
+    try { localStorage.removeItem(TRIAL_USER_KEY) } catch {}
+    return null
+  }
+  try {
+    const raw = localStorage.getItem(TRIAL_USER_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const { state } = useData()
   const [user, setUser] = useState(() => {
+    // Trial user override semua mode
+    const trial = loadTrialUser()
+    if (trial) return trial
     if (SUPABASE_ENABLED) return null
     try {
       const raw = localStorage.getItem(AUTH_KEY)
@@ -16,11 +37,12 @@ export function AuthProvider({ children }) {
       return null
     }
   })
-  const [authLoading, setAuthLoading] = useState(SUPABASE_ENABLED)
+  const [authLoading, setAuthLoading] = useState(SUPABASE_ENABLED && !loadTrialUser())
 
   // ----- Local mode: sync user dari users state -----
   useEffect(() => {
     if (SUPABASE_ENABLED || !user) return
+    if (user.isTrial) return // trial user tidak perlu sync ke state.users
     const found = state.users.find((u) => u.id === user.id)
     if (!found) {
       setUser(null)
@@ -36,6 +58,7 @@ export function AuthProvider({ children }) {
   // ----- Supabase mode: subscribe ke session + load profile -----
   useEffect(() => {
     if (!SUPABASE_ENABLED) return
+    if (user?.isTrial) { setAuthLoading(false); return }
     let unsubscribed = false
 
     async function loadProfile(session) {
@@ -102,6 +125,15 @@ export function AuthProvider({ children }) {
   )
 
   const logout = useCallback(async () => {
+    // Trial user: hapus license + trial user, tidak panggil Supabase signOut
+    if (user?.isTrial) {
+      try {
+        localStorage.removeItem(TRIAL_USER_KEY)
+        localStorage.removeItem('kbc_license_v1')
+      } catch {}
+      setUser(null)
+      return
+    }
     if (SUPABASE_ENABLED) {
       await supabase.auth.signOut()
       setUser(null)
@@ -109,7 +141,7 @@ export function AuthProvider({ children }) {
     }
     setUser(null)
     localStorage.removeItem(AUTH_KEY)
-  }, [])
+  }, [user])
 
   const value = useMemo(
     () => ({

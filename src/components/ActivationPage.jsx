@@ -52,7 +52,22 @@ export default function ActivationPage({ onActivated }) {
 
   const handleTrial = () => {
     saveLicense('TRIAL-AUTO', 'demo', {})
+    // Set user trial otomatis (bypass form login)
+    const trialUser = {
+      id: 'trial-user',
+      username: 'trial',
+      nama: 'Pengguna Trial',
+      role: 'admin', // admin penuh selama trial supaya bisa eksplor semua menu
+      pengawasId: null,
+      madrasahId: null,
+      isTrial: true
+    }
+    try {
+      localStorage.setItem('kbc_trial_user_v1', JSON.stringify(trialUser))
+    } catch {}
     onActivated({ code: 'TRIAL-AUTO', tier: 'demo' })
+    // Reload supaya AuthContext re-init dan ngambil trial user
+    setTimeout(() => window.location.reload(), 100)
   }
 
   return (
