@@ -13,6 +13,8 @@ import PendampinganPage from './pages/PendampinganPage.jsx'
 import EvidenPage from './pages/EvidenPage.jsx'
 import TindakLanjutPage from './pages/TindakLanjutPage.jsx'
 import LaporanPage from './pages/LaporanPage.jsx'
+import JurnalPembiasaanPage from './pages/JurnalPembiasaanPage.jsx'
+import ObservasiKarakterPage from './pages/ObservasiKarakterPage.jsx'
 import PengaturanPage from './pages/PengaturanPage.jsx'
 import DiagnosticPage from './pages/DiagnosticPage.jsx'
 import PenggunaPage from './pages/PenggunaPage.jsx'
@@ -109,6 +111,8 @@ export default function App() {
                     }
                   />
                   <Route path="/pendampingan" element={<PendampinganPage />} />
+                  <Route path="/jurnal-pembiasaan" element={<JurnalPembiasaanPage />} />
+                  <Route path="/observasi-karakter" element={<ObservasiKarakterPage />} />
                   <Route path="/eviden" element={<EvidenPage />} />
                   <Route path="/tindak-lanjut" element={<TindakLanjutPage />} />
                   <Route path="/laporan" element={<LaporanPage />} />
