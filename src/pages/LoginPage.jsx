@@ -9,6 +9,7 @@ import {
   saveLocalCodes, tryLoadLocalCodes, clearLicense
 } from '../lib/codes.js'
 import { registerWithEmailAndCode, activateAndRegister, MASTER_CODE } from '../lib/activation.js'
+import PembelianModal from '../components/PembelianModal.jsx'
 
 const DEMO = [
   { role: 'Admin', user: 'admin', pass: 'admin123' },
@@ -46,6 +47,9 @@ export default function LoginPage() {
   const [activationError, setActivationError] = useState('')
   const [activationLoading, setActivationLoading] = useState(false)
   const [showActivation, setShowActivation] = useState(false)
+
+  // ---- Modal Beli Lisensi FULL ----
+  const [showPembelian, setShowPembelian] = useState(false)
 
   const license = getStoredLicense()
   const licenseExpired = license?.tier === 'demo' && license.expiresAt && Date.now() > license.expiresAt
@@ -448,7 +452,7 @@ export default function LoginPage() {
               )}
               <button
                 type="button"
-                onClick={() => { setShowActivation(!showActivation); setActivationError('') }}
+                onClick={() => setShowPembelian(true)}
                 className="text-sm px-4 py-2 rounded-lg bg-navy-900 text-white hover:bg-navy-800 font-medium"
               >
                 💳 Beli Lisensi FULL
@@ -485,6 +489,8 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      <PembelianModal open={showPembelian} onClose={() => setShowPembelian(false)} />
     </div>
   )
 }
