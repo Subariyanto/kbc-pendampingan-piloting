@@ -32,18 +32,19 @@ function ActivationGate({ children }) {
     const lic = getStoredLicense()
     if (lic) { setOk(true); setCheck(true); return }
 
-    // Admin bypass: kalau ada session Supabase dan role admin, auto-aktivasi
+    // Bypass: kalau ada session Supabase valid (user sudah login), auto-aktivasi.
+    // Karena registrasi pakai kode aktivasi tervalidasi, akun ini sudah berhak akses.
     if (SUPABASE_ENABLED) {
       supabase.auth.getSession().then(async ({ data }) => {
         if (data?.session?.user) {
+          // Cek profile untuk dapat tier/expiry kalau ada di metadata
           const { data: profile } = await supabase
             .from('profiles').select('role').eq('id', data.session.user.id).maybeSingle()
-          if (profile?.role === 'admin') {
-            saveLicense('ADMIN-BYPASS', 'pro', {})
-            setOk(true)
-            setCheck(true)
-            return
-          }
+          // Set lisensi 'pro' default karena user sudah login via flow registrasi yang valid
+          saveLicense(profile?.role === 'admin' ? 'ADMIN-BYPASS' : 'AUTH-BYPASS', 'pro', { via: 'auth-bypass' })
+          setOk(true)
+          setCheck(true)
+          return
         }
         setCheck(true)
       }).catch(() => setCheck(true))
