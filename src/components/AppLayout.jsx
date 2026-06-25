@@ -17,7 +17,6 @@ const NAV_ITEMS = [
   { to: '/pembelian', label: 'Pengaturan Pembelian', icon: '💳', roles: ['admin'] },
   { to: '/pengaturan', label: 'Pengaturan', icon: '⚙️', roles: ['admin', 'pengawas'] },
   { to: '/pengguna', label: 'Kelola Pengguna', icon: '👥', roles: ['admin'] },
-  { to: '/kode-aktivasi', label: 'Kode Aktivasi', icon: '🎫', roles: ['admin'] },
   // Menu Lisensi (legacy mode lokal) disembunyikan; page tetap accessible via URL.
   // { to: '/lisensi', label: 'Lisensi', icon: '🔑', roles: ['admin'] },
   { to: '/diagnostic', label: 'Diagnostic', icon: '🩺', roles: ['admin'] }
@@ -67,8 +66,30 @@ export default function AppLayout({ children }) {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar */}
-        <header className="topbar lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 no-print">
+        {/* Desktop topbar */}
+        <header className="hidden lg:flex sticky top-0 z-30 bg-white border-b border-slate-200 items-center justify-between px-8 py-3 no-print">
+          <div className="flex items-center gap-2">
+            {settings.logoDataUrl ? (
+              <img src={settings.logoDataUrl} alt="logo" className="w-8 h-8 rounded" />
+            ) : (
+              <div className="w-8 h-8 rounded bg-navy-900 text-white flex items-center justify-center text-xs font-semibold">KBC</div>
+            )}
+            <div className="leading-tight">
+              <p className="text-sm font-semibold text-navy-900">KBC Pendampingan Piloting</p>
+              <p className="text-[10px] text-slate-500">{settings.namaInstansi}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right text-xs text-slate-500">
+              <p className="font-medium text-slate-700">{user?.nama}</p>
+              <p>{ROLE_LABELS[user?.role] || user?.role}</p>
+            </div>
+            <button onClick={onLogout} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" title="Keluar">↩</button>
+          </div>
+        </header>
+
+        {/* Mobile topbar */}
+        <header className="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 no-print">
           <button
             onClick={() => setOpen(true)}
             className="p-2 -ml-2 rounded-lg hover:bg-slate-100"
@@ -87,7 +108,18 @@ export default function AppLayout({ children }) {
               <p className="text-[10px] text-slate-500">Pokjawas Jember</p>
             </div>
           </div>
-          <button onClick={onLogout} className="p-2 rounded-lg hover:bg-slate-100 text-sm" aria-label="Keluar">↩</button>
+          <div className="flex items-center gap-1.5">
+            {user?.role === 'admin' && (
+              <NavLink
+                to="/kode-aktivasi"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-toska-300 text-toska-700 hover:bg-toska-50 transition"
+              >
+                🎫
+              </NavLink>
+            )}
+            <button onClick={onLogout} className="p-2 rounded-lg hover:bg-slate-100 text-sm" aria-label="Keluar">↩</button>
+          </div>
         </header>
 
         <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-[1400px] w-full mx-auto">
