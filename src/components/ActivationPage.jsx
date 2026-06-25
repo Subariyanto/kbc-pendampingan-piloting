@@ -3,146 +3,78 @@ import { saveLicense, MASTER_CODE } from '../lib/codes.js'
 import { verifySignedCode } from '../lib/signedLicense.js'
 import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
 
-const DEVICE_FP_KEY = 'kbc_device_fp_v1'
+const REGISTERED_USERS_KEY = 'kbc_registered_users_v1'
 
-// Generate / load device fingerprint stabil di browser ini.
-// Kombinasi random ID + UA + screen size, simpan di localStorage.
-function getDeviceFingerprint() {
+// Simpan user ke registered list (nama+password, bisa login)
+function saveRegisteredUser(nama, password, role) {
   try {
-    let fp = localStorage.getItem(DEVICE_FP_KEY)
-    if (fp) return fp
-    const rand = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)
-    const ua = (navigator.userAgent || '').slice(0, 80)
-    const screen = `${window.screen?.width || 0}x${window.screen?.height || 0}`
-    fp = `${rand}-${btoa(ua + '|' + screen).slice(0, 24)}`.replace(/[^a-zA-Z0-9-]/g, '')
-    localStorage.setItem(DEVICE_FP_KEY, fp)
-    return fp
-  } catch {
-    return 'fp-' + Math.random().toString(36).slice(2)
-  }
+    const list = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]')
+    const idx = list.findIndex((u) => u.nama.toLowerCase() === nama.toLowerCase())
+    const userObj = {
+      id: idx >= 0 ? list[idx].id : 'reg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+      nama, password, role,
+      createdAt: idx >= 0 ? list[idx].createdAt : new Date().toISOString(),
+      activatedAt: new Date().toISOString()
+    }
+    if (idx >= 0) list[idx] = userObj; else list.unshift(userObj)
+    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(list))
+  } catch {}
 }
 
 export default function ActivationPage({ onActivated }) {
   const [code, setCode] = useState('')
   const [nama, setNama] = useState('')
+  const [password, setPassword] = useState('')
+  const [password2, setPassword2] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  const setupLocalUser = (namaUser, role = 'pengawas') => {
-    const userObj = {
-      id: 'local-' + role + '-' + Date.now(),
-      username: role,
-      nama: namaUser || 'Pengguna',
-      role,
-      pengawasId: null,
-      madrasahId: null,
-      isLocalAdmin: role === 'admin'
-    }
-    try {
-      localStorage.setItem('kbc_local_user_v1', JSON.stringify(userObj))
-    } catch {}
-  }
 
   const handleActivate = async (e) => {
     e.preventDefault()
     const cleanCode = String(code).trim().toUpperCase()
     const cleanNama = String(nama).trim()
-    if (!cleanCode) {
-      setError('Masukkan kode aktivasi')
-      return
-    }
-    if (!cleanNama) {
-      setError('Isi nama Bapak/Ibu')
-      return
-    }
+    if (!cleanCode) { setError('Masukkan kode aktivasi'); return }
+    if (!cleanNama) { setError('Isi nama Bapak/Ibu'); return }
+    if (password.length < 4) { setError('Password minimal 4 karakter'); return }
+    if (password !== password2) { setError('Konfirmasi password tidak cocok'); return }
 
-    setLoading(true)
-    setError('')
-
+    setLoading(true); setError('')
     try {
-      let validatedTier = null
-      let validatedExpiresAt = 0
-      let licenseLabel = ''
-      let userRole = 'pengawas' // default customer = pengawas
-
-      // 1. Master code: admin penuh, no single-use check
+      let tier, label = '', exp = 0, role = 'pengawas'
       if (cleanCode === MASTER_CODE) {
-        validatedTier = 'pro'
-        licenseLabel = 'Master (Owner)'
-        userRole = 'admin'
+        tier = 'pro'; label = 'Master (Owner)'; role = 'admin'
       } else {
-        // 2. Verifikasi signature HMAC offline
-        const result = await verifySignedCode(cleanCode)
-        if (!result.valid) {
-          setError(result.error || 'Kode aktivasi tidak valid')
-          setLoading(false)
-          return
-        }
-        validatedTier = result.tier
-        licenseLabel = result.label
-        if (result.expiryDays > 0) {
-          validatedExpiresAt = Date.now() + result.expiryDays * 86400000
-        }
-
-        // 3. Single-use check via Supabase RPC (kalau Supabase tersedia)
-        if (SUPABASE_ENABLED) {
-          const fp = getDeviceFingerprint()
-          try {
-            const { data, error: rpcErr } = await supabase.rpc('claim_signed_code', {
-              p_code: cleanCode,
-              p_device_fp: fp,
-              p_nama: cleanNama,
-              p_tier: result.tier
-            })
-            if (rpcErr) {
-              // Kalau RPC belum di-deploy, fallback warn tapi tetap allow (degraded)
-              console.warn('claim_signed_code RPC error, allow tanpa single-use check:', rpcErr.message)
-            } else if (data && data.ok === false) {
-              setError(data.error || 'Kode tidak bisa dipakai')
-              setLoading(false)
-              return
-            }
-          } catch (rpcCatchErr) {
-            console.warn('RPC claim_signed_code failed:', rpcCatchErr)
-            // Allow degraded mode (kalau Supabase down, jangan block customer)
-          }
-        }
+        const r = await verifySignedCode(cleanCode)
+        if (!r.valid) { setError(r.error || 'Kode tidak valid'); setLoading(false); return }
+        tier = r.tier; label = r.label
+        if (r.expiryDays > 0) exp = Date.now() + r.expiryDays * 86400000
       }
 
-      // 4. Simpan lisensi + setup user lokal
-      saveLicense(cleanCode, validatedTier, {
-        via: 'signed-license',
-        label: licenseLabel,
-        expiresAt: validatedExpiresAt,
-        nama: cleanNama,
-        role: userRole
-      })
-      setupLocalUser(cleanNama, userRole)
-      onActivated({ code: cleanCode, tier: validatedTier })
+      // Simpan lisensi
+      saveLicense(cleanCode, tier, { via: 'signed-license', label, expiresAt: exp, nama: cleanNama, role })
+
+      // Simpan user terdaftar (nama+password → bisa login)
+      saveRegisteredUser(cleanNama, password, role)
+
+      // Auto-login: simpan local user supaya langsung masuk
+      const uObj = {
+        id: 'local-' + role + '-' + Date.now(),
+        username: role, nama: cleanNama, role, password,
+        pengawasId: null, madrasahId: null,
+        isLocalAdmin: role === 'admin'
+      }
+      try { localStorage.setItem('kbc_local_user_v1', JSON.stringify(uObj)) } catch {}
+
+      onActivated({ code: cleanCode, tier })
       setTimeout(() => window.location.reload(), 100)
     } catch (err) {
-      console.error(err)
-      setError('Gagal memvalidasi kode: ' + (err.message || 'unknown error'))
-    } finally {
-      setLoading(false)
-    }
+      setError('Gagal: ' + (err.message || 'Coba lagi'))
+    } finally { setLoading(false) }
   }
 
-  const handleTrial = () => {
-    saveLicense('TRIAL-AUTO', 'demo', {
-      label: 'Trial 5 Hari',
-      expiresAt: Date.now() + 5 * 86400000,
-      role: 'pengawas'
-    })
-    setupLocalUser('Pengguna Trial', 'pengawas')
-    try {
-      localStorage.setItem('kbc_trial_user_v1', JSON.stringify({
-        id: 'trial-user', username: 'trial', nama: 'Pengguna Trial',
-        role: 'pengawas', isTrial: true
-      }))
-    } catch {}
-    onActivated({ code: 'TRIAL-AUTO', tier: 'demo' })
-    setTimeout(() => window.location.reload(), 100)
+  const goToLogin = () => {
+    try { localStorage.setItem('kbc_show_login_v1', '1') } catch {}
+    window.location.reload()
   }
 
   return (
@@ -153,89 +85,63 @@ export default function ActivationPage({ onActivated }) {
             <span className="text-2xl">🔑</span>
           </div>
           <h1 className="text-2xl font-serif font-semibold text-white">Aktivasi Aplikasi</h1>
-          <p className="text-sm text-slate-300 mt-2">
-            Pendampingan Piloting Kurikulum Berbasis Cinta
-          </p>
-          <p className="text-xs text-slate-400 mt-1">
-            Masukkan kode aktivasi yang sudah dibeli
-          </p>
+          <p className="text-sm text-slate-300 mt-2">Pendampingan Piloting KBC</p>
+          <p className="text-xs text-slate-400 mt-1">Masukkan kode aktivasi & buat password login</p>
         </div>
 
         <form onSubmit={handleActivate} className="bg-white rounded-xl shadow-2xl p-6 space-y-4">
           <div>
             <label className="label text-navy-900">Nama Bapak/Ibu</label>
-            <input
-              className="input"
-              placeholder="Contoh: Subariyanto, S.Pd, M.Pd.I"
-              value={nama}
-              onChange={(e) => { setNama(e.target.value); setError('') }}
-              autoComplete="name"
-            />
+            <input className="input" placeholder="Contoh: Subariyanto, S.Pd, M.Pd.I"
+              value={nama} onChange={(e) => { setNama(e.target.value); setError('') }} autoComplete="name" />
+            <p className="text-[10px] text-slate-400 mt-1">Nama ini dipakai untuk login.</p>
           </div>
 
           <div>
             <label className="label text-navy-900">Kode Aktivasi</label>
-            <input
-              className="input text-center text-base tracking-wider font-mono uppercase"
-              placeholder="KBC-PRO-XXXXXXXX-XXXXXX-XXXXXXXXXXXX"
-              value={code}
-              onChange={(e) => { setCode(e.target.value.toUpperCase()); setError('') }}
-              autoComplete="off"
-              spellCheck={false}
-            />
+            <input className="input text-center text-base tracking-wider font-mono uppercase"
+              placeholder="KBC-XXXX-XXXXXXX"
+              value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setError('') }}
+              autoComplete="off" spellCheck={false} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label text-navy-900">Password</label>
+              <input className="input" type="password" placeholder="Min 4 karakter"
+                value={password} onChange={(e) => { setPassword(e.target.value); setError('') }}
+                autoComplete="new-password" />
+            </div>
+            <div>
+              <label className="label text-navy-900">Ulangi Password</label>
+              <input className="input" type="password" placeholder="Konfirmasi"
+                value={password2} onChange={(e) => { setPassword2(e.target.value); setError('') }}
+                autoComplete="new-password" />
+            </div>
           </div>
 
           {error && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg px-4 py-2">
-              {error}
-            </div>
+            <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg px-4 py-2">{error}</div>
           )}
 
-          <button
-            type="submit"
-            className="btn-primary w-full py-3 text-base"
-            disabled={loading}
-          >
+          <button type="submit" className="btn-primary w-full py-3 text-base" disabled={loading}>
             {loading ? 'Memvalidasi…' : 'Aktivasi & Masuk'}
           </button>
 
-          <div className="relative py-2">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-3 text-slate-400">atau</span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleTrial}
-            className="btn-outline w-full py-3 text-base border-amber-300 text-amber-700 hover:bg-amber-50"
-          >
-            🎁 Coba Gratis 5 Hari
-          </button>
-
-          <p className="text-xs text-slate-500 text-center leading-relaxed">
-            Kode aktivasi terikat ke 1 device. Untuk pindah device, gunakan menu Pengaturan → Backup & Restore JSON.
-          </p>
-
           <p className="text-xs text-slate-400 text-center">
             Belum punya kode?{' '}
-            <a
-              href="https://wa.me/6282330647698?text=Saya%20butuh%20kode%20aktivasi%20KBC%20Pendampingan%20Piloting"
-              target="_blank"
-              rel="noreferrer"
-              className="text-toska-700 hover:underline"
-            >
-              Hubungi Admin via WhatsApp
+            <a href="https://wa.me/6282330647698" target="_blank" rel="noreferrer" className="text-toska-700 hover:underline">
+              Hubungi Admin
             </a>
           </p>
         </form>
 
-        <p className="text-center text-xs text-slate-500 mt-6">
-          Pokjawas Madrasah Kemenag Kab. Jember
-        </p>
+        <div className="text-center mt-6">
+          <button type="button" onClick={goToLogin} className="text-sm text-toska-300 hover:text-white hover:underline">
+            ← Sudah punya akun? Login di sini
+          </button>
+        </div>
+        <p className="text-center text-xs text-slate-500 mt-4">Pokjawas Madrasah Kemenag Kab. Jember</p>
       </div>
     </div>
   )

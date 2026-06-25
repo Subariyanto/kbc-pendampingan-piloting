@@ -283,10 +283,21 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                 <div className="px-4 py-2 bg-navy-50 border-b border-navy-100 flex items-center justify-between">
                   <p className="font-semibold text-sm text-navy-900">Aspek {aspek.kode}. {aspek.nama}</p>
                 </div>
-                <div className="px-4 py-1.5 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <div className="px-4 py-1.5 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 items-center">
                   <span className="col-span-4">Indikator</span>
                   <span className="col-span-4">Skor</span>
-                  <span className="col-span-4">Keterangan</span>
+                  <span className="col-span-4">Catatan</span>
+                </div>
+                {/* Header angka skor */}
+                <div className="px-4 py-1 bg-navy-100/50 border-b border-slate-200 grid grid-cols-12 gap-2 items-center">
+                  <span className="col-span-4" />
+                  <div className="col-span-4 grid grid-cols-4 gap-1 text-center">
+                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">1</span>
+                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">2</span>
+                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">3</span>
+                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">4</span>
+                  </div>
+                  <span className="col-span-4" />
                 </div>
                 <div className="divide-y divide-slate-100">
                   {aspek.indikator.map((ind) => (
@@ -295,30 +306,31 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                         <span className="text-xs font-mono text-toska-700 mr-2">{aspek.kode}{ind.nomor}</span>
                         {ind.teks}
                       </p>
-                      <div className="sm:col-span-4">
-                        <select
-                          className="input !text-xs !py-1.5"
-                          value={form.skor?.[ind.id] || 0}
-                          onChange={(e) => {
-                            const s = Number(e.target.value)
-                            updSkor(ind.id, s)
-                            updKet(ind.id, SKOR_LABELS[s] || '')
-                          }}
-                        >
-                          <option value={0}>— Pilih Skor —</option>
-                          {[1, 2, 3, 4].map((s) => (
-                            <option key={s} value={s}>{s} · {SKOR_LABELS[s]}</option>
-                          ))}
-                        </select>
+                      <div className="sm:col-span-4 grid grid-cols-4 gap-1 items-center">
+                        {[1, 2, 3, 4].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => {
+                              const newSkor = form.skor?.[ind.id] === s ? 0 : s
+                              updSkor(ind.id, newSkor)
+                              updKet(ind.id, newSkor ? SKOR_LABELS[newSkor] : '')
+                            }}
+                            className={`w-7 h-7 mx-auto flex items-center justify-center rounded border text-sm font-bold transition ${
+                              form.skor?.[ind.id] === s
+                                ? 'border-navy-700 bg-navy-800 text-white'
+                                : 'border-slate-300 bg-white hover:border-toska-400 hover:bg-toska-50'
+                            }`}
+                            title={`${s} · ${SKOR_LABELS[s]}`}
+                          >
+                            {form.skor?.[ind.id] === s ? '✓' : ''}
+                          </button>
+                        ))}
                       </div>
                       <div className="sm:col-span-4">
-                        <textarea
-                          className="input !text-xs !py-1.5"
-                          rows={1}
-                          placeholder="Keterangan..."
-                          value={form.keterangan?.[ind.id] || ''}
-                          onChange={(e) => updKet(ind.id, e.target.value)}
-                        />
+                        <span className={`text-xs block px-2 py-1.5 rounded ${form.keterangan?.[ind.id] ? 'bg-navy-50 text-navy-800 font-medium' : 'text-slate-400 italic'}`}>
+                          {form.keterangan?.[ind.id] || '— pilih skor —'}
+                        </span>
                       </div>
                     </div>
                   ))}

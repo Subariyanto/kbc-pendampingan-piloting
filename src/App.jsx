@@ -27,18 +27,23 @@ import { LOCAL_ONLY_MODE } from './lib/appMode.js'
 function ActivationGate({ children }) {
   const [ok, setOk] = useState(false)
   const [check, setCheck] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
 
   useEffect(() => {
+    // Check flag: kalau user klik "Login" dari ActivationPage
+    try {
+      const flag = localStorage.getItem('kbc_show_login_v1')
+      if (flag) {
+        localStorage.removeItem('kbc_show_login_v1')
+        setShowLogin(true)
+      }
+    } catch {}
+
     const lic = getStoredLicense()
     if (lic) { setOk(true); setCheck(true); return }
 
-    // Mode lokal: tidak perlu cek Supabase auth — langsung tampilkan halaman aktivasi
-    if (LOCAL_ONLY_MODE) {
-      setCheck(true)
-      return
-    }
+    if (LOCAL_ONLY_MODE) { setCheck(true); return }
 
-    // Bypass mode multi-tenant: kalau ada session Supabase valid (user sudah login), auto-aktivasi.
     if (SUPABASE_ENABLED) {
       supabase.auth.getSession().then(async ({ data }) => {
         if (data?.session?.user) {
@@ -68,7 +73,13 @@ function ActivationGate({ children }) {
       </div>
     )
   }
-  if (!ok) return <ActivationPage onActivated={onActivated} />
+  if (!ok) {
+    // Kalau ada flag showLogin dan sudah ada lisensi (dari aktivasi sebelumnya), tampilkan login
+    if (showLogin && getStoredLicense()) {
+      return <LoginPage />
+    }
+    return <ActivationPage onActivated={onActivated} />
+  }
   return children
 }
 

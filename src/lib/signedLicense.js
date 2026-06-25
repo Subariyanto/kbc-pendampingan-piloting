@@ -23,8 +23,6 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567' // base32 (no 0/1/8/9 utk hi
 const TIERS = {
   PRO: { tier: 'pro', expiryDays: 0, label: 'Pro Lifetime' },
   BASIC: { tier: 'basic', expiryDays: 0, label: 'Basic Lifetime' },
-  TRIAL5: { tier: 'demo', expiryDays: 5, label: 'Trial 5 Hari' },
-  TRIAL7: { tier: 'demo', expiryDays: 7, label: 'Trial 7 Hari' },
   TRIAL30: { tier: 'demo', expiryDays: 30, label: 'Trial 30 Hari' }
 }
 
@@ -93,12 +91,13 @@ export async function generateSignedCode(tierKey) {
   const tierDef = TIERS[tierKey]
   if (!tierDef) throw new Error(`Tier tidak dikenal: ${tierKey}`)
 
-  const ts = Date.now().toString(36).toUpperCase() // base36
-  const nonce = randomBase32(6)
-  const payload = `${tierKey}|${ts}|${nonce}`
+  const year = new Date().getFullYear()
+  const nonce = randomBase32(4)
+  // Tanda tangan pendek (3 chars) untuk validasi offline
+  const payload = `${tierKey}|${year}|${nonce}`
   const sigBytes = await hmacSign(payload, getSecret())
-  const sig = bytesToBase32(sigBytes, 12)
-  const code = `KBC-${tierKey}-${ts}-${nonce}-${sig}`
+  const sig = bytesToBase32(sigBytes, 3)
+  const code = `KBC-${year}-${nonce}${sig}`
 
   return {
     code,
@@ -121,44 +120,63 @@ export async function verifySignedCode(code) {
   if (!clean) return { valid: false, error: 'Kode kosong' }
 
   const parts = clean.split('-')
-  if (parts.length !== 5 || parts[0] !== 'KBC') {
-    return { valid: false, error: 'Format kode tidak valid' }
+
+  // Format baru: KBC-YYYY-XXXXXXX (year + 4 nonce + 3 sig = 7 chars)
+  if (parts.length === 3 && parts[0] === 'KBC') {
+    const [, yearStr, tail] = parts
+    if (!/^\d{4}$/.test(yearStr) || tail.length !== 7) {
+      return { valid: false, error: 'Format kode tidak valid' }
+    }
+    const nonce = tail.slice(0, 4)
+    const sig = tail.slice(4, 7)
+
+    for (const [tierKey, tierDef] of Object.entries(TIERS)) {
+      const payload = `${tierKey}|${yearStr}|${nonce}`
+      const expectedSigBytes = await hmacSign(payload, getSecret())
+      const expectedSig = bytesToBase32(expectedSigBytes, 3)
+      if (sig === expectedSig) {
+        return {
+          valid: true,
+          tierKey,
+          tier: tierDef.tier,
+          expiryDays: tierDef.expiryDays,
+          label: tierDef.label,
+          issuedAt: parseInt(yearStr) ? new Date(parseInt(yearStr), 0, 1).getTime() : Date.now(),
+          nonce
+        }
+      }
+    }
+    return { valid: false, error: 'Kode tidak valid atau salah ketik' }
   }
 
-  const [, tierKey, ts, nonce, sig] = parts
-  const tierDef = TIERS[tierKey]
-  if (!tierDef) {
-    return { valid: false, error: `Tier "${tierKey}" tidak dikenal` }
+  // Format lama: KBC-TIER-TS-NONCE-SIG (backward compat)
+  if (parts.length === 5 && parts[0] === 'KBC') {
+    const [, tierKey, ts, nonce, sig] = parts
+    const tierDef = TIERS[tierKey]
+    if (!tierDef) {
+      return { valid: false, error: `Tier "${tierKey}" tidak dikenal` }
+    }
+    if (!/^[0-9A-Z]+$/.test(ts) || nonce.length !== 6 || sig.length !== 12) {
+      return { valid: false, error: 'Format kode tidak valid' }
+    }
+    const payload = `${tierKey}|${ts}|${nonce}`
+    const expectedSigBytes = await hmacSign(payload, getSecret())
+    const expectedSig = bytesToBase32(expectedSigBytes, 12)
+    if (sig !== expectedSig) {
+      return { valid: false, error: 'Kode tidak valid atau salah ketik' }
+    }
+    return {
+      valid: true,
+      tierKey,
+      tier: tierDef.tier,
+      expiryDays: tierDef.expiryDays,
+      label: tierDef.label,
+      issuedAt: parseInt(ts, 36),
+      nonce
+    }
   }
 
-  // Validasi format ts (base36) & nonce (base32 6 chars)
-  if (!/^[0-9A-Z]+$/.test(ts) || nonce.length !== 6 || sig.length !== 12) {
-    return { valid: false, error: 'Format kode tidak valid' }
-  }
-
-  // Hitung ulang HMAC
-  const payload = `${tierKey}|${ts}|${nonce}`
-  const expectedSigBytes = await hmacSign(payload, getSecret())
-  const expectedSig = bytesToBase32(expectedSigBytes, 12)
-
-  if (sig !== expectedSig) {
-    return { valid: false, error: 'Tanda tangan kode tidak valid (kode palsu atau salah ketik)' }
-  }
-
-  // Cek revoke (opsional) — daftar revoked di localStorage atau remote
-  if (isCodeRevoked(clean)) {
-    return { valid: false, error: 'Kode sudah dicabut oleh admin' }
-  }
-
-  return {
-    valid: true,
-    tierKey,
-    tier: tierDef.tier,
-    expiryDays: tierDef.expiryDays,
-    label: tierDef.label,
-    issuedAt: parseInt(ts, 36),
-    nonce
-  }
+  return { valid: false, error: 'Format kode tidak valid' }
 }
 
 // =============================================================================

@@ -113,6 +113,58 @@ export default function KodeAktivasiPage() {
     toast.success('Daftar kode diekspor')
   }
 
+  const onPrint = () => {
+    const now = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+    const rows = filtered.map((c, i) => {
+      const status = getStatus(c)
+      return `<tr>
+        <td style="text-align:center;padding:6px 8px;border:1px solid #333">${i + 1}</td>
+        <td style="font-family:monospace;font-size:11px;padding:6px 8px;border:1px solid #333">${c.code}</td>
+        <td style="padding:6px 8px;border:1px solid #333">${c.label}</td>
+        <td style="padding:6px 8px;border:1px solid #333">${c.soldTo || '—'}</td>
+        <td style="padding:6px 8px;border:1px solid #333;text-align:center">${status === 'aktif' ? '✅ Aktif' : '⏳ Belum Aktif'}</td>
+        <td style="padding:6px 8px;border:1px solid #333;font-size:11px">${c.issuedAt ? new Date(c.issuedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+      </tr>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html><head><title>Cetak Kode Aktivasi</title>
+<style>
+  body{font-family:Arial,sans-serif;margin:20px;font-size:12px}
+  .header{display:flex;align-items:center;gap:12px;border-bottom:3px solid #102a4d;padding-bottom:10px;margin-bottom:16px}
+  .header img{width:60px;height:60px}
+  .header h2{margin:0;color:#102a4d;font-size:16px}
+  .header p{margin:2px 0;color:#555;font-size:11px}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th{background:#102a4d;color:white;padding:8px;border:1px solid #333;font-size:11px;text-align:center}
+  .footer{margin-top:24px;text-align:right;font-size:11px}
+  @media print{body{margin:0}.no-print{display:none}}
+</style></head><body>
+<div class="header">
+  <img src="https://subariyanto.github.io/kbc-pendampingan-piloting/logo.png" alt="logo"/>
+  <div>
+    <h2>Kode Aktivasi</h2>
+    <p>Pokjawas Madrasah Kabupaten Jember</p>
+    <p>Dicetak: ${now} | Total: ${filtered.length} kode</p>
+  </div>
+</div>
+<table>
+  <thead><tr><th style="width:30px">No</th><th>Kode</th><th>Tier</th><th>Nama Pengawas</th><th>Status</th><th>Diterbitkan</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="footer"><p>Jember, ${now}<br/>Pengawas Madrasah</p><br/><br/><p><strong>Subariyanto, S.Pd, M.Pd.I</strong><br/>NIP. 197002122005011004</p></div>
+</body></html>`
+
+    const w = window.open('', '_blank')
+    if (w) {
+      w.document.write(html)
+      w.document.close()
+      w.focus()
+      w.print()
+    } else {
+      toast.error('Popup diblokir browser')
+    }
+  }
+
   const onImport = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -149,6 +201,7 @@ export default function KodeAktivasiPage() {
             <button className="btn-ghost" onClick={onExport}>📥 Export</button>
             <input ref={fileInputRef} type="file" accept="application/json,.json" className="hidden" onChange={onImport} />
             <button className="btn-ghost" onClick={() => fileInputRef.current?.click()}>📤 Import</button>
+            <button className="btn-ghost" onClick={onPrint}>🖨️ Cetak</button>
             <button className="btn-primary" onClick={() => setCreating(true)}>➕ Terbitkan Kode</button>
           </>
         }
@@ -177,13 +230,7 @@ export default function KodeAktivasiPage() {
 
       {/* Filter */}
       <div className="card-pad mb-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <input
-            className="input"
-            placeholder="🔍 Cari kode atau nama pengawas..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <select className="input" value={filterTier} onChange={(e) => setFilterTier(e.target.value)}>
             <option value="all">Semua tier</option>
             <option value="pro">Pro Lifetime</option>
@@ -214,26 +261,23 @@ export default function KodeAktivasiPage() {
               <thead>
                 <tr>
                   <th className="w-[100px]">Aksi</th>
+                  <th className="w-[30px] text-center">No</th>
                   <th>Kode</th>
                   <th>Tier</th>
                   <th className="text-center">Nama Pengawas</th>
                   <th className="text-center">Status</th>
-                  <th>Diterbitkan</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
+                {filtered.map((c, idx) => (
                   <CodeRow
                     key={c.code}
+                    no={idx + 1}
                     record={c}
                     status={getStatus(c)}
                     onCopy={() => onCopy(c.code)}
                     onAktifkan={(nama) => onAktifkan(c.code, nama)}
                     onNonaktifkan={() => onNonaktifkan(c.code)}
-                    onUpdateNote={(note) => {
-                      updateAdminCode(c.code, { note })
-                      refresh()
-                    }}
                     onDelete={() => setConfirmDelete(c)}
                   />
                 ))}
@@ -274,11 +318,9 @@ export default function KodeAktivasiPage() {
   )
 }
 
-function CodeRow({ record, status, onCopy, onAktifkan, onNonaktifkan, onUpdateNote, onDelete }) {
+function CodeRow({ no, record, status, onCopy, onAktifkan, onNonaktifkan, onDelete }) {
   const [editingNama, setEditingNama] = useState(false)
   const [namaPengawas, setNamaPengawas] = useState(record.soldTo || '')
-  const [editingNote, setEditingNote] = useState(false)
-  const [note, setNote] = useState(record.note || '')
 
   const isAktif = status === 'aktif'
 
@@ -307,26 +349,15 @@ function CodeRow({ record, status, onCopy, onAktifkan, onNonaktifkan, onUpdateNo
         <button className="ml-1 p-1.5 rounded text-slate-400 hover:text-rose-600 transition" onClick={onDelete} title="Hapus">🗑</button>
       </td>
 
+      {/* NO */}
+      <td className="text-center text-xs text-slate-500">{no}</td>
+
       {/* KODE */}
       <td>
         <button onClick={onCopy} className="font-mono text-xs font-semibold text-navy-900 hover:text-toska-700 cursor-pointer flex items-center gap-1" title="Klik untuk salin">
           <span className="break-all">{record.code}</span>
           <span className="text-[10px]">📋</span>
         </button>
-        {editingNote ? (
-          <input
-            className="input input-sm text-xs mt-1"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            autoFocus
-            onBlur={() => { onUpdateNote(note); setEditingNote(false) }}
-            onKeyDown={(e) => { if (e.key === 'Enter') { onUpdateNote(note); setEditingNote(false) } }}
-          />
-        ) : (
-          <p className="text-[10px] text-slate-400 mt-0.5 cursor-pointer hover:text-toska-700" onClick={() => setEditingNote(true)}>
-            {record.note || <span className="italic">+ catatan</span>}
-          </p>
-        )}
       </td>
 
       {/* TIER */}
@@ -384,10 +415,6 @@ function CodeRow({ record, status, onCopy, onAktifkan, onNonaktifkan, onUpdateNo
         </span>
       </td>
 
-      {/* DITERBITKAN */}
-      <td className="text-xs text-slate-500">
-        {record.issuedAt ? new Date(record.issuedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-      </td>
     </tr>
   )
 }

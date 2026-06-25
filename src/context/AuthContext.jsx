@@ -7,6 +7,7 @@ import { getStoredLicense } from '../lib/codes.js'
 const AUTH_KEY = 'kbc_auth_v1'
 const TRIAL_USER_KEY = 'kbc_trial_user_v1'
 const LOCAL_USER_KEY = 'kbc_local_user_v1'
+const REGISTERED_USERS_KEY = 'kbc_registered_users_v1'
 
 function loadTrialUser() {
   // Trial user hanya valid kalau lisensi tier=demo masih aktif
@@ -148,17 +149,42 @@ export function AuthProvider({ children }) {
   const login = useCallback(
     async (username, password) => {
       if (SUPABASE_ENABLED) {
-        // Username = email saat mode Supabase
         const { data, error } = await supabase.auth.signInWithPassword({
           email: String(username).trim(), password
         })
         if (error) return { ok: false, error: error.message }
         return { ok: true, user: data.user }
       }
-      const found = state.users.find(
-        (u) => u.username.toLowerCase() === String(username).toLowerCase() && u.password === password
+      const uname = String(username).trim().toLowerCase()
+      const pass = String(password)
+
+      // 1. Cek state.users (seeded demo users)
+      let found = state.users.find(
+        (u) => u.username.toLowerCase() === uname && u.password === pass
       )
-      if (!found) return { ok: false, error: 'Username atau password salah' }
+
+      // 2. Cek registered users (dari aktivasi kode)
+      if (!found) {
+        try {
+          const registered = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]')
+          const regUser = registered.find(
+            (u) => u.nama.toLowerCase() === uname && u.password === pass
+          )
+          if (regUser) {
+            found = {
+              id: regUser.id,
+              username: regUser.nama,
+              nama: regUser.nama,
+              role: regUser.role || 'pengawas',
+              password: regUser.password,
+              pengawasId: null,
+              madrasahId: null
+            }
+          }
+        } catch {}
+      }
+
+      if (!found) return { ok: false, error: 'Nama atau password salah' }
       setUser(found)
       localStorage.setItem(AUTH_KEY, JSON.stringify(found))
       return { ok: true, user: found }

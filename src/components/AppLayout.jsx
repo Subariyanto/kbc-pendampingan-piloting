@@ -109,18 +109,7 @@ export default function AppLayout({ children }) {
               <p className="text-[10px] text-slate-500">Pokjawas Jember</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-{['admin','pengawas'].includes(user?.role) && (
-              <NavLink
-                to="/kode-aktivasi"
-                onClick={() => setOpen(false)}
-                className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-toska-300 text-toska-700 hover:bg-toska-50 transition"
-              >
-                🎫
-              </NavLink>
-            )}
-            <button onClick={onLogout} className="p-2 rounded-lg hover:bg-slate-100 text-sm" aria-label="Keluar">↩</button>
-          </div>
+          <button onClick={onLogout} className="p-2 rounded-lg hover:bg-slate-100 text-sm" aria-label="Keluar">↩</button>
         </header>
 
         <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-[1400px] w-full mx-auto">
