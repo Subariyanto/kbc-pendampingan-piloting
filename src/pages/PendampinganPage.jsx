@@ -305,23 +305,20 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                             updKet(ind.id, SKOR_LABELS[s] || '')
                           }}
                         >
-                          <option value={0}>— Pilih —</option>
+                          <option value={0}>— Pilih Skor —</option>
                           {[1, 2, 3, 4].map((s) => (
                             <option key={s} value={s}>{s} · {SKOR_LABELS[s]}</option>
                           ))}
                         </select>
                       </div>
                       <div className="sm:col-span-4">
-                        <select
+                        <textarea
                           className="input !text-xs !py-1.5"
+                          rows={1}
+                          placeholder="Keterangan..."
                           value={form.keterangan?.[ind.id] || ''}
                           onChange={(e) => updKet(ind.id, e.target.value)}
-                        >
-                          <option value="">— Pilih —</option>
-                          {Object.values(SKOR_LABELS).map((label) => (
-                            <option key={label} value={label}>{label}</option>
-                          ))}
-                        </select>
+                        />
                       </div>
                     </div>
                   ))}
