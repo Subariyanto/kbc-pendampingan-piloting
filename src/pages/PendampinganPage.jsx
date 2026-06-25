@@ -3,7 +3,7 @@ import PageHeader from '../components/PageHeader.jsx'
 import Modal, { ConfirmDialog } from '../components/Modal.jsx'
 import Badge from '../components/Badge.jsx'
 import EmptyState from '../components/EmptyState.jsx'
-import PrintHeader, { PrintSignature } from '../components/PrintHeader.jsx'
+import PrintHeader from '../components/PrintHeader.jsx'
 import ProgressBar from '../components/ProgressBar.jsx'
 import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
@@ -18,7 +18,7 @@ const EMPTY = {
   tanggal: todayISO(), madrasahId: '', pengawasId: '', bentuk: '',
   kegiatan: '', temuanPositif: '', kendala: '', observasi: '', rekomendasi: '',
   rencanaTindakLanjut: '', batasTL: '', statusTL: 'Belum Dikerjakan',
-  buktiLink: '', skor: {}
+  buktiLink: '', skor: {}, keterangan: {}
 }
 
 export default function PendampinganPage() {
@@ -190,6 +190,7 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
   const [form, setForm] = useState(value)
   const upd = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   const updSkor = (id, v) => setForm((f) => ({ ...f, skor: { ...f.skor, [id]: v } }))
+  const updKet = (id, v) => setForm((f) => ({ ...f, keterangan: { ...f.keterangan, [id]: v } }))
   const ringkas = summarizeSkor(form.skor, instrumen)
   const submit = (e) => { e.preventDefault(); onSave(form) }
 
@@ -269,6 +270,68 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
           <input className="input" value={form.kegiatan} onChange={(e) => upd('kegiatan', e.target.value)} required />
         </FieldWithFill>
 
+        <div>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <p className="font-semibold text-navy-900">Skor Instrumen</p>
+            <p className="text-sm text-slate-600">
+              Total {ringkas.totalSkor}/{ringkas.maksSkor} · {ringkas.pct.toFixed(1)}% · <Badge tone={ringkas.kategori.tone}>{ringkas.kategori.label}</Badge>
+            </p>
+          </div>
+          <div className="space-y-3">
+            {instrumen.map((aspek) => (
+              <div key={aspek.id} className="rounded-lg border border-slate-200">
+                <div className="px-4 py-2 bg-navy-50 border-b border-navy-100 flex items-center justify-between">
+                  <p className="font-semibold text-sm text-navy-900">Aspek {aspek.kode}. {aspek.nama}</p>
+                </div>
+                <div className="px-4 py-1.5 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span className="col-span-4">Indikator</span>
+                  <span className="col-span-4">Skor</span>
+                  <span className="col-span-4">Keterangan</span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {aspek.indikator.map((ind) => (
+                    <div key={ind.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center px-4 py-2.5">
+                      <p className="sm:col-span-4 text-sm text-slate-700">
+                        <span className="text-xs font-mono text-toska-700 mr-2">{aspek.kode}{ind.nomor}</span>
+                        {ind.teks}
+                      </p>
+                      <div className="sm:col-span-4 flex flex-wrap gap-1">
+                        {[1, 2, 3, 4].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => updSkor(ind.id, form.skor?.[ind.id] === s ? 0 : s)}
+                            className={`flex-1 min-w-[50px] text-[11px] rounded-md px-1.5 py-1.5 border transition ${
+                              form.skor?.[ind.id] === s
+                                ? 'bg-navy-900 text-white border-navy-900'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-toska-400'
+                            }`}
+                            title={SKOR_LABELS[s]}
+                          >
+                            {s}·{SKOR_LABELS[s].split(' ').slice(0,2).join(' ')}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="sm:col-span-4">
+                        <textarea
+                          className="input !text-xs !py-1.5"
+                          rows={1}
+                          placeholder="Keterangan..."
+                          value={form.keterangan?.[ind.id] || ''}
+                          onChange={(e) => updKet(ind.id, e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <hr className="border-slate-200" />
+        <p className="font-semibold text-navy-900">Temuan &amp; Rekomendasi</p>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FieldWithFill label="Temuan Positif" onFill={() => fillField('temuanPositif')} disabled={!form.madrasahId}>
             <textarea className="input" rows={4} value={form.temuanPositif} onChange={(e) => upd('temuanPositif', e.target.value)} />
@@ -298,51 +361,6 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
         <Field label="Tautan Bukti Kegiatan (opsional)">
           <input className="input" placeholder="https://drive.google.com/..." value={form.buktiLink} onChange={(e) => upd('buktiLink', e.target.value)} />
         </Field>
-
-        <div>
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <p className="font-semibold text-navy-900">Skor Instrumen</p>
-            <p className="text-sm text-slate-600">
-              Total {ringkas.totalSkor}/{ringkas.maksSkor} · {ringkas.pct.toFixed(1)}% · <Badge tone={ringkas.kategori.tone}>{ringkas.kategori.label}</Badge>
-            </p>
-          </div>
-          <div className="space-y-3">
-            {instrumen.map((aspek) => (
-              <div key={aspek.id} className="rounded-lg border border-slate-200">
-                <div className="px-4 py-2 bg-navy-50 border-b border-navy-100 flex items-center justify-between">
-                  <p className="font-semibold text-sm text-navy-900">Aspek {aspek.kode}. {aspek.nama}</p>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {aspek.indikator.map((ind) => (
-                    <div key={ind.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center px-4 py-2.5">
-                      <p className="sm:col-span-7 text-sm text-slate-700">
-                        <span className="text-xs font-mono text-toska-700 mr-2">{aspek.kode}{ind.nomor}</span>
-                        {ind.teks}
-                      </p>
-                      <div className="sm:col-span-5 flex flex-wrap gap-1">
-                        {[1, 2, 3, 4].map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => updSkor(ind.id, form.skor?.[ind.id] === s ? 0 : s)}
-                            className={`flex-1 min-w-[60px] text-xs rounded-md px-2 py-1.5 border transition ${
-                              form.skor?.[ind.id] === s
-                                ? 'bg-navy-900 text-white border-navy-900'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-toska-400'
-                            }`}
-                            title={SKOR_LABELS[s]}
-                          >
-                            {s} · {SKOR_LABELS[s].split(' ')[0]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </form>
     </Modal>
   )
@@ -402,7 +420,7 @@ function PrintModal({ item, mode, settings, instrumen, madrasah, pengawas, onClo
           </div>
         )}
 
-        <PrintSignature settings={settings} namaPengawas={pengawas?.nama} nipPengawas={pengawas?.nip} tanggal={item.tanggal} />
+        <SingleSignature tempat="Jember" tanggal={item.tanggal} namaPengawas={pengawas?.nama} nipPengawas={pengawas?.nip} />
       </div>
     </Modal>
   )
@@ -446,6 +464,20 @@ function FieldWithFill({ label, required, onFill, disabled, children }) {
         </button>
       </div>
       {children}
+    </div>
+  )
+}
+
+function SingleSignature({ tempat = 'Jember', tanggal, namaPengawas, nipPengawas }) {
+  const t = tanggal ? new Date(tanggal) : new Date()
+  const tanggalLabel = t.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  return (
+    <div className="mt-10 text-sm font-serif text-right">
+      <p>{tempat}, {tanggalLabel}</p>
+      <p>Pengawas Pendamping,</p>
+      <div style={{ height: 80 }} />
+      <p className="font-semibold underline">{namaPengawas || '____________________'}</p>
+      {nipPengawas && <p>NIP. {nipPengawas}</p>}
     </div>
   )
 }
