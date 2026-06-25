@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import PageHeader from '../components/PageHeader.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import Modal from '../components/Modal.jsx'
@@ -16,7 +16,6 @@ import {
   removeRevokedCode
 } from '../lib/signedLicense.js'
 import { downloadJSON, readJSONFile } from '../lib/utils.js'
-import { useRef } from 'react'
 
 const TIER_TONES = {
   pro: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -25,15 +24,13 @@ const TIER_TONES = {
 }
 
 const STATUS_TONES = {
-  aktif: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  belum_aktif: 'bg-sky-100 text-sky-800 border-sky-200',
-  revoked: 'bg-rose-100 text-rose-800 border-rose-200'
+  aktif: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  belum_aktif: 'bg-sky-100 text-sky-800 border-sky-300'
 }
 
 const STATUS_LABELS = {
   aktif: '✅ Aktif',
-  belum_aktif: '⏳ Belum Aktif',
-  revoked: '🚫 Dicabut'
+  belum_aktif: '⏳ Belum Aktif'
 }
 
 export default function KodeAktivasiPage() {
@@ -55,7 +52,6 @@ export default function KodeAktivasiPage() {
   useEffect(() => { refresh() }, [])
 
   const getStatus = (c) => {
-    if (revoked.includes(c.code)) return 'revoked'
     if (c.status === 'aktif' || c.soldTo) return 'aktif'
     return 'belum_aktif'
   }
@@ -78,9 +74,8 @@ export default function KodeAktivasiPage() {
   const stats = useMemo(() => ({
     total: codes.length,
     aktif: codes.filter((c) => getStatus(c) === 'aktif').length,
-    belumAktif: codes.filter((c) => getStatus(c) === 'belum_aktif').length,
-    revoked: codes.filter((c) => revoked.includes(c.code)).length
-  }), [codes, revoked])
+    belumAktif: codes.filter((c) => getStatus(c) === 'belum_aktif').length
+  }), [codes])
 
   const onCopy = (code) => {
     navigator.clipboard.writeText(code)
@@ -88,35 +83,23 @@ export default function KodeAktivasiPage() {
       .catch(() => toast.error('Gagal menyalin'))
   }
 
-  const onToggleRevoke = (code) => {
-    if (revoked.includes(code)) {
-      removeRevokedCode(code)
-      toast.success('Kode aktif kembali')
-    } else {
-      addRevokedCode(code)
-      toast.success('Kode dicabut')
-    }
+  const onAktifkan = (code, namaPengawas) => {
+    updateAdminCode(code, { soldTo: namaPengawas, soldAt: Date.now(), status: 'aktif' })
     refresh()
+    toast.success(`Kode diaktifkan untuk ${namaPengawas}`)
+  }
+
+  const onNonaktifkan = (code) => {
+    updateAdminCode(code, { soldTo: null, soldAt: null, status: 'belum_aktif' })
+    refresh()
+    toast.success('Kode dinonaktifkan')
   }
 
   const onDelete = (record) => {
     deleteAdminCode(record.code)
-    if (revoked.includes(record.code)) removeRevokedCode(record.code)
     refresh()
-    toast.success('Catatan kode dihapus')
+    toast.success('Kode dihapus')
     setConfirmDelete(null)
-  }
-
-  const onMarkAktif = (code, namaPengawas) => {
-    updateAdminCode(code, { soldTo: namaPengawas, soldAt: Date.now(), status: 'aktif' })
-    refresh()
-    toast.success(`Kode ditandai aktif untuk ${namaPengawas}`)
-  }
-
-  const onMarkBelumAktif = (code) => {
-    updateAdminCode(code, { soldTo: null, soldAt: null, status: 'belum_aktif' })
-    refresh()
-    toast.success('Kode ditandai belum aktif')
   }
 
   const onExport = () => {
@@ -146,9 +129,6 @@ export default function KodeAktivasiPage() {
         }
       }
       saveAdminCodes(merged)
-      if (Array.isArray(data.revoked)) {
-        for (const r of data.revoked) addRevokedCode(r)
-      }
       refresh()
       toast.success(`${added} kode baru di-import`)
     } catch (err) {
@@ -162,20 +142,20 @@ export default function KodeAktivasiPage() {
     <>
       <PageHeader
         title="Kode Aktivasi"
-        description="Terbitkan kode aktivasi untuk pengawas madrasah. Status kode: Aktif (sudah dipakai) / Belum Aktif (belum dipakai)."
+        description="Terbitkan dan kelola kode aktivasi untuk pengawas madrasah."
         icon="🎫"
         actions={
           <>
-            <button className="btn-ghost" onClick={onExport}>📥 Export JSON</button>
+            <button className="btn-ghost" onClick={onExport}>📥 Export</button>
             <input ref={fileInputRef} type="file" accept="application/json,.json" className="hidden" onChange={onImport} />
-            <button className="btn-ghost" onClick={() => fileInputRef.current?.click()}>📤 Import JSON</button>
+            <button className="btn-ghost" onClick={() => fileInputRef.current?.click()}>📤 Import</button>
             <button className="btn-primary" onClick={() => setCreating(true)}>➕ Terbitkan Kode</button>
           </>
         }
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="card-pad">
           <p className="text-xs text-slate-500">Total Kode</p>
           <p className="text-2xl font-bold text-navy-900">{stats.total}</p>
@@ -188,15 +168,11 @@ export default function KodeAktivasiPage() {
           <p className="text-xs text-slate-500">⏳ Belum Aktif</p>
           <p className="text-2xl font-bold text-sky-700">{stats.belumAktif}</p>
         </div>
-        <div className="card-pad">
-          <p className="text-xs text-slate-500">🚫 Dicabut</p>
-          <p className="text-2xl font-bold text-rose-700">{stats.revoked}</p>
-        </div>
       </div>
 
-      {/* Peringatan tracking manual */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
-        <strong>⚠️ Catatan:</strong> Status kode dilacak secara manual. Saat Bapak memberikan kode ke pengawas, tandai sebagai <strong>Aktif</strong> dan isi nama pengawas. Data aktivasi sebenarnya tersimpan di browser masing-masing pengawas (localStorage), bukan di server.
+      {/* Info tracking manual */}
+      <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 mb-4 text-xs text-sky-800">
+        <strong>💡 Cara kerja:</strong> Saat memberikan kode ke pengawas, klik <strong>Aktifkan</strong> dan isi nama pengawas. Status otomatis berubah jadi ✅ Aktif. Data aktivasi sebenarnya tersimpan di browser masing-masing pengawas (localStorage).
       </div>
 
       {/* Filter */}
@@ -204,7 +180,7 @@ export default function KodeAktivasiPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <input
             className="input"
-            placeholder="🔍 Cari kode, nama pengawas, atau catatan..."
+            placeholder="🔍 Cari kode atau nama pengawas..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -218,7 +194,6 @@ export default function KodeAktivasiPage() {
             <option value="all">Semua status</option>
             <option value="aktif">Aktif</option>
             <option value="belum_aktif">Belum Aktif</option>
-            <option value="revoked">Dicabut</option>
           </select>
         </div>
       </div>
@@ -229,7 +204,7 @@ export default function KodeAktivasiPage() {
           <EmptyState
             title={codes.length === 0 ? 'Belum ada kode' : 'Tidak ada yang cocok'}
             description={codes.length === 0
-              ? 'Klik "Terbitkan Kode" untuk membuat kode pertama. Kode ditandatangani offline dengan HMAC, bisa diaktivasi tanpa internet.'
+              ? 'Klik "Terbitkan Kode" untuk membuat kode pertama.'
               : 'Ubah filter atau kata kunci.'
             }
           />
@@ -238,12 +213,12 @@ export default function KodeAktivasiPage() {
             <table className="table-clean">
               <thead>
                 <tr>
+                  <th className="w-[100px]">Aksi</th>
                   <th>Kode</th>
                   <th>Tier</th>
-                  <th>Nama Pengawas</th>
-                  <th>Status Kode</th>
+                  <th className="text-center">Nama Pengawas</th>
+                  <th className="text-center">Status</th>
                   <th>Diterbitkan</th>
-                  <th className="text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -253,13 +228,12 @@ export default function KodeAktivasiPage() {
                     record={c}
                     status={getStatus(c)}
                     onCopy={() => onCopy(c.code)}
-                    onMarkAktif={(nama) => onMarkAktif(c.code, nama)}
-                    onMarkBelumAktif={() => onMarkBelumAktif(c.code)}
+                    onAktifkan={(nama) => onAktifkan(c.code, nama)}
+                    onNonaktifkan={() => onNonaktifkan(c.code)}
                     onUpdateNote={(note) => {
                       updateAdminCode(c.code, { note })
                       refresh()
                     }}
-                    onToggleRevoke={() => onToggleRevoke(c.code)}
                     onDelete={() => setConfirmDelete(c)}
                   />
                 ))}
@@ -280,7 +254,7 @@ export default function KodeAktivasiPage() {
         <Modal
           open
           onClose={() => setConfirmDelete(null)}
-          title="Hapus Catatan Kode"
+          title="Hapus Kode"
           footer={
             <>
               <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Batal</button>
@@ -289,10 +263,10 @@ export default function KodeAktivasiPage() {
           }
         >
           <p className="text-sm">
-            Yakin menghapus catatan kode <strong className="font-mono">{confirmDelete.code}</strong>?
+            Yakin menghapus kode <strong className="font-mono">{confirmDelete.code}</strong>?
           </p>
           <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
-            ⚠️ Catatan dihapus dari daftar Bapak. <strong>Kode tetap valid</strong> di browser yang sudah aktivasi (karena pakai signed HMAC). Kalau ingin nonaktifkan, gunakan tombol "Cabut" supaya masuk daftar revoked.
+            ⚠️ Catatan dihapus dari daftar. Kode tetap valid di browser yang sudah aktivasi.
           </p>
         </Modal>
       )}
@@ -300,106 +274,119 @@ export default function KodeAktivasiPage() {
   )
 }
 
-function CodeRow({ record, status, onCopy, onMarkAktif, onMarkBelumAktif, onUpdateNote, onToggleRevoke, onDelete }) {
+function CodeRow({ record, status, onCopy, onAktifkan, onNonaktifkan, onUpdateNote, onDelete }) {
   const [editingNama, setEditingNama] = useState(false)
   const [namaPengawas, setNamaPengawas] = useState(record.soldTo || '')
   const [editingNote, setEditingNote] = useState(false)
   const [note, setNote] = useState(record.note || '')
 
-  const isRevoked = status === 'revoked'
   const isAktif = status === 'aktif'
 
   return (
-    <tr className={isRevoked ? 'bg-rose-50/50' : ''}>
+    <tr>
+      {/* AKSI — tombol di kiri */}
+      <td className="whitespace-nowrap">
+        {!isAktif ? (
+          <button
+            className="px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm"
+            onClick={() => {
+              const nama = record.soldTo || prompt('Nama pengawas yang menerima kode:')
+              if (nama?.trim()) onAktifkan(nama.trim())
+            }}
+          >
+            ✅ Aktifkan
+          </button>
+        ) : (
+          <button
+            className="px-3 py-1.5 rounded-md text-xs font-semibold bg-sky-500 text-white hover:bg-sky-600 transition shadow-sm"
+            onClick={onNonaktifkan}
+          >
+            ⏸ Nonaktifkan
+          </button>
+        )}
+        <button className="ml-1 p-1.5 rounded text-slate-400 hover:text-rose-600 transition" onClick={onDelete} title="Hapus">🗑</button>
+      </td>
+
+      {/* KODE */}
       <td>
         <button onClick={onCopy} className="font-mono text-xs font-semibold text-navy-900 hover:text-toska-700 cursor-pointer flex items-center gap-1" title="Klik untuk salin">
           <span className="break-all">{record.code}</span>
-          <span>📋</span>
+          <span className="text-[10px]">📋</span>
         </button>
         {editingNote ? (
-          <div className="flex gap-1 mt-1">
-            <input
-              className="input input-sm text-xs flex-1"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              autoFocus
-              onBlur={() => { onUpdateNote(note); setEditingNote(false) }}
-              onKeyDown={(e) => { if (e.key === 'Enter') { onUpdateNote(note); setEditingNote(false) } }}
-            />
-          </div>
+          <input
+            className="input input-sm text-xs mt-1"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            autoFocus
+            onBlur={() => { onUpdateNote(note); setEditingNote(false) }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { onUpdateNote(note); setEditingNote(false) } }}
+          />
         ) : (
-          <p className="text-xs text-slate-500 mt-0.5 cursor-pointer hover:text-toska-700" onClick={() => setEditingNote(true)}>
-            {record.note || <span className="italic text-slate-400">+ catatan</span>}
+          <p className="text-[10px] text-slate-400 mt-0.5 cursor-pointer hover:text-toska-700" onClick={() => setEditingNote(true)}>
+            {record.note || <span className="italic">+ catatan</span>}
           </p>
         )}
       </td>
+
+      {/* TIER */}
       <td>
         <span className={`inline-block px-2 py-0.5 rounded border text-xs font-medium ${TIER_TONES[record.tier]}`}>
           {record.label}
         </span>
       </td>
-      <td>
+
+      {/* NAMA PENGAWAS — tengah */}
+      <td className="text-center">
         {editingNama ? (
-          <div className="flex gap-1">
-            <input
-              className="input input-sm text-xs"
-              value={namaPengawas}
-              onChange={(e) => setNamaPengawas(e.target.value)}
-              placeholder="Nama pengawas"
-              autoFocus
-              onBlur={() => {
-                if (namaPengawas.trim()) { onMarkAktif(namaPengawas.trim()); setEditingNama(false) }
-                else { setEditingNama(false) }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && namaPengawas.trim()) {
-                  onMarkAktif(namaPengawas.trim())
-                  setEditingNama(false)
-                }
-              }}
-            />
-          </div>
+          <input
+            className="input input-sm text-xs text-center"
+            value={namaPengawas}
+            onChange={(e) => setNamaPengawas(e.target.value)}
+            placeholder="Nama pengawas"
+            autoFocus
+            onBlur={() => {
+              if (namaPengawas.trim()) {
+                onAktifkan(namaPengawas.trim())
+              } else {
+                onNonaktifkan()
+              }
+              setEditingNama(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (namaPengawas.trim()) onAktifkan(namaPengawas.trim())
+                else onNonaktifkan()
+                setEditingNama(false)
+              }
+            }}
+          />
         ) : record.soldTo ? (
-          <div className="cursor-pointer hover:text-toska-700" onClick={() => setEditingNama(true)}>
-            <p className="font-medium text-navy-900 text-sm">{record.soldTo}</p>
+          <div className="cursor-pointer hover:text-toska-700" onClick={() => { setNamaPengawas(record.soldTo); setEditingNama(true) }}>
+            <p className="font-semibold text-navy-900 text-sm">{record.soldTo}</p>
             {record.soldAt && (
               <p className="text-[10px] text-slate-500">
-                {new Date(record.soldAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                sejak {new Date(record.soldAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
               </p>
             )}
           </div>
         ) : (
-          <button className="text-xs text-toska-700 hover:underline" onClick={() => setEditingNama(true)}>
-            + isi nama pengawas
+          <button className="text-xs text-slate-400 hover:text-toska-700" onClick={() => setEditingNama(true)}>
+            <span className="italic">belum diisi</span>
           </button>
         )}
       </td>
-      <td>
-        <span className={`inline-block px-2 py-0.5 rounded border text-xs font-medium ${STATUS_TONES[status]}`}>
+
+      {/* STATUS */}
+      <td className="text-center">
+        <span className={`inline-block px-2.5 py-1 rounded-full border text-xs font-semibold ${STATUS_TONES[status]}`}>
           {STATUS_LABELS[status]}
         </span>
       </td>
+
+      {/* DITERBITKAN */}
       <td className="text-xs text-slate-500">
         {record.issuedAt ? new Date(record.issuedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-      </td>
-      <td className="text-right whitespace-nowrap">
-        {isAktif && !isRevoked && (
-          <button
-            className="btn-sm btn-ghost mr-1 text-amber-700"
-            onClick={onMarkBelumAktif}
-            title="Tandai belum aktif"
-          >
-            ↩️
-          </button>
-        )}
-        <button
-          className={`btn-sm mr-1 ${isRevoked ? 'btn-toska' : 'btn-ghost'}`}
-          onClick={onToggleRevoke}
-          title={isRevoked ? 'Aktifkan kembali' : 'Cabut kode (revoke)'}
-        >
-          {isRevoked ? '✅' : '🚫'}
-        </button>
-        <button className="btn-danger btn-sm" onClick={onDelete} title="Hapus catatan">🗑</button>
       </td>
     </tr>
   )
@@ -416,10 +403,6 @@ function CreateCodeModal({ onClose, onSaved }) {
 
   const handleGenerate = async (e) => {
     e.preventDefault()
-    if (!namaPengawas.trim()) {
-      toast.error('Nama pengawas wajib diisi')
-      return
-    }
     const count = Math.min(50, Math.max(1, parseInt(bulkCount) || 1))
     setGenerating(true)
     try {
@@ -428,16 +411,16 @@ function CreateCodeModal({ onClose, onSaved }) {
         const c = await generateSignedCode(tierKey)
         const record = {
           ...c,
-          soldTo: namaPengawas.trim(),
-          soldAt: Date.now(),
-          status: 'aktif',
+          soldTo: namaPengawas.trim() || null,
+          soldAt: namaPengawas.trim() ? Date.now() : null,
+          status: namaPengawas.trim() ? 'aktif' : 'belum_aktif',
           note: note.trim()
         }
         addAdminCode(record)
         generated.push(record)
       }
       setResults(generated)
-      toast.success(`${count} kode berhasil diterbitkan untuk ${namaPengawas.trim()}`)
+      toast.success(`${count} kode berhasil diterbitkan`)
     } catch (err) {
       toast.error('Gagal: ' + err.message)
     } finally {
@@ -459,12 +442,12 @@ function CreateCodeModal({ onClose, onSaved }) {
         footer={
           <>
             <button className="btn-ghost" onClick={onCopyAll}>📋 Salin Semua</button>
-            <button className="btn-primary" onClick={() => { onSaved() }}>Selesai</button>
+            <button className="btn-primary" onClick={onSaved}>Selesai</button>
           </>
         }
       >
         <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-3 mb-3">
-          ✅ {results.length} kode berhasil dibuat untuk <strong>{results[0]?.soldTo}</strong>. Salin & kirim kode ke pengawas.
+          ✅ {results.length} kode berhasil dibuat{results[0]?.soldTo ? ` untuk ${results[0].soldTo}` : ''}. Salin & kirim kode ke pengawas.
         </p>
         <div className="bg-slate-900 text-emerald-300 font-mono text-xs p-3 rounded max-h-64 overflow-y-auto space-y-1">
           {results.map((r) => (
@@ -490,20 +473,19 @@ function CreateCodeModal({ onClose, onSaved }) {
       }
     >
       <form id="codeForm" onSubmit={handleGenerate} className="space-y-3">
-        <div className="bg-toska-50 border border-toska-200 rounded p-3 text-xs text-toska-900">
-          💡 Kode ditandatangani offline pakai HMAC-SHA256. Bisa diaktivasi tanpa internet di browser pengawas.
+        <div className="bg-sky-50 border border-sky-200 rounded p-3 text-xs text-sky-900">
+          💡 Kode ditandatangani offline pakai HMAC-SHA256. Bisa diaktivasi tanpa internet.
         </div>
 
         <div>
-          <label className="label">Nama Pengawas <span className="text-rose-500">*</span></label>
+          <label className="label">Nama Pengawas <span className="text-slate-400 text-[10px]">(opsional)</span></label>
           <input
             className="input"
             value={namaPengawas}
             onChange={(e) => setNamaPengawas(e.target.value)}
-            placeholder="Nama lengkap pengawas"
-            required
+            placeholder="Kosongkan jika belum tahu penerimanya"
           />
-          <p className="text-[10px] text-slate-500 mt-1">Wajib diisi — akan tercatat sebagai pemilik kode</p>
+          <p className="text-[10px] text-slate-500 mt-1">Jika diisi → kode langsung berstatus <strong>Aktif</strong>. Kosongkan → <strong>Belum Aktif</strong>.</p>
         </div>
 
         <div>
@@ -512,7 +494,7 @@ function CreateCodeModal({ onClose, onSaved }) {
             {TIER_OPTIONS.map((opt) => (
               <label
                 key={opt.key}
-                className={`flex items-center gap-3 p-3 rounded border cursor-pointer ${tierKey === opt.key ? 'border-navy-900 bg-navy-50' : 'border-slate-200 hover:border-slate-300'}`}
+                className={`flex items-center gap-3 p-3 rounded border cursor-pointer transition ${tierKey === opt.key ? 'border-navy-900 bg-navy-50 ring-1 ring-navy-200' : 'border-slate-200 hover:border-slate-300'}`}
               >
                 <input
                   type="radio"
@@ -524,7 +506,7 @@ function CreateCodeModal({ onClose, onSaved }) {
                 <div className="flex-1">
                   <p className="font-medium text-navy-900">{opt.label}</p>
                   <p className="text-xs text-slate-500">
-                    {opt.expiryDays > 0 ? `Berlaku ${opt.expiryDays} hari sejak aktivasi` : 'Lifetime — tidak ada expired'}
+                    {opt.expiryDays > 0 ? `Berlaku ${opt.expiryDays} hari` : 'Lifetime — tidak expired'}
                   </p>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded ${TIER_TONES[opt.tier]}`}>
@@ -548,12 +530,12 @@ function CreateCodeModal({ onClose, onSaved }) {
             />
           </div>
           <div>
-            <label className="label">Catatan (opsional)</label>
+            <label className="label">Catatan <span className="text-slate-400 text-[10px]">(opsional)</span></label>
             <input
               className="input"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="mis. KKMA 04 batch Juni 2026"
+              placeholder="mis. KKMA 04 batch Juni"
             />
           </div>
         </div>

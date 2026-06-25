@@ -14,12 +14,13 @@ const NAV_ITEMS = [
   { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/laporan', label: 'Laporan', icon: '📊', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/pembelian', label: 'Pengaturan Pembelian', icon: '💳', roles: ['admin'] },
+  { to: '/pembelian', label: 'Pengaturan Pembelian', icon: '💳', roles: ['admin', 'pengawas'] },
   { to: '/pengaturan', label: 'Pengaturan', icon: '⚙️', roles: ['admin', 'pengawas'] },
-  { to: '/pengguna', label: 'Kelola Pengguna', icon: '👥', roles: ['admin'] },
+  { to: '/pengguna', label: 'Kelola Pengguna', icon: '👥', roles: ['admin', 'pengawas'] },
+  { to: '/kode-aktivasi', label: 'Kode Aktivasi', icon: '🎫', roles: ['admin', 'pengawas'] },
   // Menu Lisensi (legacy mode lokal) disembunyikan; page tetap accessible via URL.
   // { to: '/lisensi', label: 'Lisensi', icon: '🔑', roles: ['admin'] },
-  { to: '/diagnostic', label: 'Diagnostic', icon: '🩺', roles: ['admin'] }
+  { to: '/diagnostic', label: 'Diagnostic', icon: '🩺', roles: ['admin', 'pengawas'] }
 ]
 
 export default function AppLayout({ children }) {
@@ -109,7 +110,7 @@ export default function AppLayout({ children }) {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            {user?.role === 'admin' && (
+{['admin','pengawas'].includes(user?.role) && (
               <NavLink
                 to="/kode-aktivasi"
                 onClick={() => setOpen(false)}
