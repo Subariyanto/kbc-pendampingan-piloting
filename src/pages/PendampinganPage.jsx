@@ -285,17 +285,18 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                     <th colSpan={4} className="bg-navy-800 text-white text-left px-3 py-2 font-semibold border border-navy-700">Aspek {aspek.kode}. {aspek.nama}</th>
                   </tr>
                   <tr>
-                    <th className="w-12 bg-slate-100 border border-slate-300 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center">Kode</th>
-                    <th className="bg-slate-100 border border-slate-300 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-left">Indikator</th>
-                    <th className="w-32 bg-slate-100 border border-slate-300 py-1 text-center">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Skor</div>
-                      <div className="flex justify-center">
-                        {['1','2','3','4'].map((n, i) => (
-                          <span key={n} className={`w-7 h-5 flex items-center justify-center text-[10px] font-bold text-navy-800 bg-navy-100 ${i === 0 ? 'border border-navy-300' : 'border-t border-r border-b border-navy-300'}`}>{n}</span>
+                    <th className="w-[5%] bg-slate-100 border border-slate-300 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center">Kode</th>
+                    <th className="w-[45%] bg-slate-100 border border-slate-300 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-left">Indikator</th>
+                    <th className="w-[20%] bg-slate-100 border border-slate-300 py-0">
+                      <table className="w-full border-collapse"><thead><tr>
+                        <th colSpan={4} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 py-1 text-center border-b border-slate-300">Skor</th>
+                      </tr><tr>
+                        {['1','2','3','4'].map((n) => (
+                          <th key={n} className="w-1/4 text-center text-xs font-bold text-navy-800 bg-navy-100 border border-navy-300 py-1">{n}</th>
                         ))}
-                      </div>
+                      </tr></thead></table>
                     </th>
-                    <th className="w-36 bg-slate-100 border border-slate-300 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-left">Catatan</th>
+                    <th className="w-[30%] bg-slate-100 border border-slate-300 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-left">Catatan</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -305,31 +306,32 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                         <span className="text-xs font-mono font-extrabold text-toska-700">{aspek.kode}.{ind.nomor}</span>
                       </td>
                       <td className="border border-slate-200 px-2 py-1.5 text-slate-700">{ind.teks}</td>
-                      <td className="border border-slate-200 py-1.5">
-                        <div className="flex justify-center">
-                          {[1, 2, 3, 4].map((s, i) => {
+                      <td className="border border-slate-200 p-0">
+                        <table className="w-full border-collapse"><tbody><tr>
+                          {[1, 2, 3, 4].map((s) => {
                             const aktif = form.skor?.[ind.id] === s
                             return (
-                              <button
-                                key={s}
-                                type="button"
-                                onClick={() => {
-                                  const newSkor = aktif ? 0 : s
-                                  updSkor(ind.id, newSkor)
-                                  updKet(ind.id, newSkor ? SKOR_LABELS[newSkor] : '')
-                                }}
-                                className={`w-7 h-7 flex items-center justify-center transition ${
-                                  aktif
-                                    ? 'bg-navy-800 text-white border border-navy-700'
-                                    : 'bg-white hover:bg-toska-50'
-                                } ${i === 0 ? 'border border-slate-400' : 'border-t border-r border-b border-slate-400'}`}
-                                title={`${s} · ${SKOR_LABELS[s]}`}
-                              >
-                                {aktif ? <span className="text-xs font-bold">✓</span> : null}
-                              </button>
+                              <td key={s} className="w-1/4 border border-slate-300 p-0 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newSkor = aktif ? 0 : s
+                                    updSkor(ind.id, newSkor)
+                                    updKet(ind.id, newSkor ? SKOR_LABELS[newSkor] : '')
+                                  }}
+                                  className={`w-full h-8 flex items-center justify-center transition ${
+                                    aktif
+                                      ? 'bg-navy-800 text-white'
+                                      : 'bg-white hover:bg-toska-50'
+                                  }`}
+                                  title={`${s} · ${SKOR_LABELS[s]}`}
+                                >
+                                  {aktif ? <span className="text-sm font-bold">✓</span> : null}
+                                </button>
+                              </td>
                             )
                           })}
-                        </div>
+                        </tr></tbody></table>
                       </td>
                       <td className="border border-slate-200 px-2 py-1.5">
                         <span className={`text-xs ${form.keterangan?.[ind.id] ? 'text-navy-800 font-medium' : 'text-slate-400 italic'}`}>
