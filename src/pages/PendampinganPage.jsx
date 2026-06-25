@@ -295,31 +295,33 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                         <span className="text-xs font-mono text-toska-700 mr-2">{aspek.kode}{ind.nomor}</span>
                         {ind.teks}
                       </p>
-                      <div className="sm:col-span-4 flex flex-wrap gap-1">
-                        {[1, 2, 3, 4].map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => updSkor(ind.id, form.skor?.[ind.id] === s ? 0 : s)}
-                            className={`flex-1 min-w-[50px] text-[11px] rounded-md px-1.5 py-1.5 border transition ${
-                              form.skor?.[ind.id] === s
-                                ? 'bg-navy-900 text-white border-navy-900'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-toska-400'
-                            }`}
-                            title={SKOR_LABELS[s]}
-                          >
-                            {s}·{SKOR_LABELS[s].split(' ').slice(0,2).join(' ')}
-                          </button>
-                        ))}
+                      <div className="sm:col-span-4">
+                        <select
+                          className="input !text-xs !py-1.5"
+                          value={form.skor?.[ind.id] || 0}
+                          onChange={(e) => {
+                            const s = Number(e.target.value)
+                            updSkor(ind.id, s)
+                            updKet(ind.id, SKOR_LABELS[s] || '')
+                          }}
+                        >
+                          <option value={0}>— Pilih —</option>
+                          {[1, 2, 3, 4].map((s) => (
+                            <option key={s} value={s}>{s} · {SKOR_LABELS[s]}</option>
+                          ))}
+                        </select>
                       </div>
                       <div className="sm:col-span-4">
-                        <textarea
+                        <select
                           className="input !text-xs !py-1.5"
-                          rows={1}
-                          placeholder="Keterangan..."
                           value={form.keterangan?.[ind.id] || ''}
                           onChange={(e) => updKet(ind.id, e.target.value)}
-                        />
+                        >
+                          <option value="">— Pilih —</option>
+                          {Object.values(SKOR_LABELS).map((label) => (
+                            <option key={label} value={label}>{label}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   ))}
