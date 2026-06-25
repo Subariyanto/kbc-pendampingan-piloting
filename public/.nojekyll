@@ -1,0 +1,2 @@
+// SPA redirect for GitHub Pages 404 fallback (handled by 404.html copy)
+// Vite SPA on GitHub Pages: serve dist/index.html as 404.html so deep links work.
