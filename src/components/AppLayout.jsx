@@ -13,9 +13,12 @@ const NAV_ITEMS = [
   { to: '/pendampingan', label: 'Hasil Pendampingan', icon: '📝', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
   { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/laporan', label: 'Laporan', icon: '📊', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/pengaturan', label: 'Pengaturan', icon: '⚙️', roles: ['admin', 'pengawas'] },
-  { to: '/kode-aktivasi', label: 'Kode Aktivasi', icon: '🎫', roles: ['admin', 'pengawas'] }
+  { to: '/laporan', label: 'Capaian Madrasah Piloting', icon: '📊', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
+  { to: '/laporan-lengkap', label: 'Laporan Lengkap', icon: '📖', roles: ['admin', 'pengawas'] },
+  { to: '/panduan', label: 'Panduan Penggunaan', icon: '📘', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
+  { to: '/backup', label: 'Backup & Restore', icon: '💾', roles: ['admin', 'pengawas'] },
+  { to: '/pengaturan', label: 'Data Utama', icon: '⚙️', roles: ['admin', 'pengawas'] },
+  { to: '/kode-aktivasi', label: 'Kode Aktivasi', icon: '🎫', roles: ['admin'] }
 ]
 
 export default function AppLayout({ children }) {
@@ -35,14 +38,16 @@ export default function AppLayout({ children }) {
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar desktop */}
-      <aside className="hidden lg:flex w-64 flex-col bg-navy-950 text-white no-print">
+      <aside className="hidden lg:flex w-64 flex-col bg-navy-950 text-white no-print fixed left-0 top-0 bottom-0">
         <Brand settings={settings} />
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {items.map((it) => (
             <SidebarItem key={it.to} {...it} />
           ))}
+          <div className="pt-3 border-t border-white/10 mt-3">
+            <UserBlock user={user} onLogout={onLogout} />
+          </div>
         </nav>
-        <UserBlock user={user} onLogout={onLogout} />
       </aside>
 
       {/* Sidebar mobile */}
@@ -55,13 +60,15 @@ export default function AppLayout({ children }) {
               {items.map((it) => (
                 <SidebarItem key={it.to} {...it} onClick={() => setOpen(false)} />
               ))}
+              <div className="pt-3 border-t border-white/10 mt-3">
+                <UserBlock user={user} onLogout={onLogout} />
+              </div>
             </nav>
-            <UserBlock user={user} onLogout={onLogout} />
           </aside>
         </div>
       )}
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         {/* Desktop topbar */}
         <header className="hidden lg:flex sticky top-0 z-30 bg-white border-b border-slate-200 items-center justify-between px-8 py-3 no-print">
           <div className="flex items-center gap-2">
