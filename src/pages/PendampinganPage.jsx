@@ -277,71 +277,65 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
               Total {ringkas.totalSkor}/{ringkas.maksSkor} · {ringkas.pct.toFixed(1)}% · <Badge tone={ringkas.kategori.tone}>{ringkas.kategori.label}</Badge>
             </p>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {instrumen.map((aspek) => (
-              <table key={aspek.id} className="w-full border-collapse border border-slate-300 text-sm">
-                <thead>
-                  <tr>
-                    <th colSpan={4} className="bg-navy-800 text-white text-left px-3 py-2 font-semibold border border-navy-700">Aspek {aspek.kode}. {aspek.nama}</th>
-                  </tr>
-                  <tr>
-                    <th className="w-[5%] bg-slate-100 border border-slate-300 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center">Kode</th>
-                    <th className="w-[45%] bg-slate-100 border border-slate-300 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-left">Indikator</th>
-                    <th className="w-[20%] bg-slate-100 border border-slate-300 py-0">
-                      <table className="w-full border-collapse"><thead><tr>
-                        <th colSpan={4} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 py-1 text-center border-b border-slate-300">Skor</th>
-                      </tr><tr>
-                        {['1','2','3','4'].map((n) => (
-                          <th key={n} className="w-1/4 text-center text-xs font-bold text-navy-800 bg-navy-100 border border-navy-300 py-1">{n}</th>
-                        ))}
-                      </tr></thead></table>
-                    </th>
-                    <th className="w-[30%] bg-slate-100 border border-slate-300 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-left">Catatan</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <div key={aspek.id} className="rounded-lg border border-slate-200">
+                <div className="px-4 py-2 bg-navy-50 border-b border-navy-100 flex items-center justify-between">
+                  <p className="font-semibold text-sm text-navy-900">Aspek {aspek.kode}. {aspek.nama}</p>
+                </div>
+                <div className="px-4 py-1.5 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 items-center">
+                  <span className="col-span-4">Indikator</span>
+                  <span className="col-span-4">Skor</span>
+                  <span className="col-span-4">Catatan</span>
+                </div>
+                {/* Header angka skor */}
+                <div className="px-4 py-1 bg-navy-100/50 border-b border-slate-200 grid grid-cols-12 gap-2 items-center">
+                  <span className="col-span-4" />
+                  <div className="col-span-4 grid grid-cols-4 gap-1 text-center">
+                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">1</span>
+                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">2</span>
+                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">3</span>
+                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">4</span>
+                  </div>
+                  <span className="col-span-4" />
+                </div>
+                <div className="divide-y divide-slate-100">
                   {aspek.indikator.map((ind) => (
-                    <tr key={ind.id}>
-                      <td className="border border-slate-200 px-2 py-1.5 text-center">
-                        <span className="text-xs font-mono font-extrabold text-toska-700">{aspek.kode}.{ind.nomor}</span>
-                      </td>
-                      <td className="border border-slate-200 px-2 py-1.5 text-slate-700">{ind.teks}</td>
-                      <td className="border border-slate-200 p-0">
-                        <table className="w-full border-collapse"><tbody><tr>
-                          {[1, 2, 3, 4].map((s) => {
-                            const aktif = form.skor?.[ind.id] === s
-                            return (
-                              <td key={s} className="w-1/4 border border-slate-300 p-0 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const newSkor = aktif ? 0 : s
-                                    updSkor(ind.id, newSkor)
-                                    updKet(ind.id, newSkor ? SKOR_LABELS[newSkor] : '')
-                                  }}
-                                  className={`w-full h-8 flex items-center justify-center transition ${
-                                    aktif
-                                      ? 'bg-navy-800 text-white'
-                                      : 'bg-white hover:bg-toska-50'
-                                  }`}
-                                  title={`${s} · ${SKOR_LABELS[s]}`}
-                                >
-                                  {aktif ? <span className="text-sm font-bold">✓</span> : null}
-                                </button>
-                              </td>
-                            )
-                          })}
-                        </tr></tbody></table>
-                      </td>
-                      <td className="border border-slate-200 px-2 py-1.5">
-                        <span className={`text-xs ${form.keterangan?.[ind.id] ? 'text-navy-800 font-medium' : 'text-slate-400 italic'}`}>
+                    <div key={ind.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center px-4 py-2.5">
+                      <p className="sm:col-span-4 text-sm text-slate-700">
+                        <span className="text-xs font-mono text-toska-700 mr-2">{aspek.kode}{ind.nomor}</span>
+                        {ind.teks}
+                      </p>
+                      <div className="sm:col-span-4 grid grid-cols-4 gap-1 items-center">
+                        {[1, 2, 3, 4].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => {
+                              const newSkor = form.skor?.[ind.id] === s ? 0 : s
+                              updSkor(ind.id, newSkor)
+                              updKet(ind.id, newSkor ? SKOR_LABELS[newSkor] : '')
+                            }}
+                            className={`w-7 h-7 mx-auto flex items-center justify-center rounded border text-sm font-bold transition ${
+                              form.skor?.[ind.id] === s
+                                ? 'border-navy-700 bg-navy-800 text-white'
+                                : 'border-slate-300 bg-white hover:border-toska-400 hover:bg-toska-50'
+                            }`}
+                            title={`${s} · ${SKOR_LABELS[s]}`}
+                          >
+                            {form.skor?.[ind.id] === s ? '✓' : ''}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="sm:col-span-4">
+                        <span className={`text-xs block px-2 py-1.5 rounded ${form.keterangan?.[ind.id] ? 'bg-navy-50 text-navy-800 font-medium' : 'text-slate-400 italic'}`}>
                           {form.keterangan?.[ind.id] || '— pilih skor —'}
                         </span>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
             ))}
           </div>
         </div>
