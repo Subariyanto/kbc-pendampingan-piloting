@@ -56,14 +56,8 @@ export default function ActivationPage({ onActivated }) {
       // Simpan user terdaftar (nama+password → bisa login)
       saveRegisteredUser(cleanNama, password, role)
 
-      // Auto-login: simpan local user supaya langsung masuk
-      const uObj = {
-        id: 'local-' + role + '-' + Date.now(),
-        username: role, nama: cleanNama, role, password,
-        pengawasId: null, madrasahId: null,
-        isLocalAdmin: role === 'admin'
-      }
-      try { localStorage.setItem('kbc_local_user_v1', JSON.stringify(uObj)) } catch {}
+      // Hapus kbc_local_user_v1 agar user login manual (tidak auto-bypass)
+      try { localStorage.removeItem('kbc_local_user_v1') } catch {}
 
       onActivated({ code: cleanCode, tier })
       setTimeout(() => window.location.reload(), 100)
@@ -73,7 +67,11 @@ export default function ActivationPage({ onActivated }) {
   }
 
   const goToLogin = () => {
-    try { localStorage.setItem('kbc_show_login_v1', '1') } catch {}
+    // Buat lisensi temporary untuk bypass ActivationGate (saveLicense sudah di-import di atas)
+    saveLicense('TEMP-LOGIN', 'pro', { 
+      via: 'temp-login-bypass',
+      expiresAt: Date.now() + 3600000 // 1 jam, cukup untuk login
+    })
     window.location.reload()
   }
 

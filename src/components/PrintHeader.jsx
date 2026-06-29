@@ -23,22 +23,23 @@ export default function PrintHeader({ settings, judul = 'LAPORAN PENDAMPINGAN IM
   )
 }
 
-export function PrintSignature({ settings, namaPengawas = '____________________', nipPengawas, tempat = 'Jember', tanggal }) {
+export function PrintSignature({ settings, namaPengawas = '____________________', nipPengawas, tanggal }) {
   const t = tanggal ? new Date(tanggal) : new Date()
   const tanggalLabel = t.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  const namaKabupaten = settings.kabupaten || 'Jember'
 
-  // Selalu tampilkan dua kolom: Mengetahui Ketua Pokjawas (kiri) dan Pengawas Pendamping (kanan).
+  // Dua kolom: Mengetahui Pengawas Pendamping (kiri) dan Pengawas Pendamping (kanan).
   return (
     <div className="grid grid-cols-2 gap-12 mt-10 text-sm font-serif">
       <div>
         <p>Mengetahui,</p>
-        <p>Ketua Pokjawas Madrasah Kabupaten Jember</p>
+        <p>Pengawas Pendamping</p>
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{settings.ketuaPokjawas}</p>
         {settings.nipKetua && <p>NIP. {settings.nipKetua}</p>}
       </div>
       <div className="text-left">
-        <p>{tempat}, {tanggalLabel}</p>
+        <p>{namaKabupaten}, {tanggalLabel}</p>
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{namaPengawas}</p>

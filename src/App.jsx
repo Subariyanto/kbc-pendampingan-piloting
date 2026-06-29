@@ -13,8 +13,12 @@ import PendampinganPage from './pages/PendampinganPage.jsx'
 import EvidenPage from './pages/EvidenPage.jsx'
 import TindakLanjutPage from './pages/TindakLanjutPage.jsx'
 import LaporanPage from './pages/LaporanPage.jsx'
+import LaporanLengkapPage from './pages/LaporanLengkapPage.jsx'
+import PanduanPage from './pages/PanduanPage.jsx'
+import BackupRestorePage from './pages/BackupRestorePage.jsx'
 import PengaturanPage from './pages/PengaturanPage.jsx'
 import DiagnosticPage from './pages/DiagnosticPage.jsx'
+import DebugPage from './pages/DebugPage.jsx'
 import PenggunaPage from './pages/PenggunaPage.jsx'
 import LisensiPage from './pages/LisensiPage.jsx'
 import PembelianPage from './pages/PembelianPage.jsx'
@@ -27,20 +31,21 @@ import { LOCAL_ONLY_MODE } from './lib/appMode.js'
 function ActivationGate({ children }) {
   const [ok, setOk] = useState(false)
   const [check, setCheck] = useState(false)
-  const [showLogin, setShowLogin] = useState(false)
 
   useEffect(() => {
-    // Check flag: kalau user klik "Login" dari ActivationPage
-    try {
-      const flag = localStorage.getItem('kbc_show_login_v1')
-      if (flag) {
-        localStorage.removeItem('kbc_show_login_v1')
-        setShowLogin(true)
+    // Fungsi untuk cek lisensi (bisa dipanggil berulang)
+    const checkLicense = () => {
+      const lic = getStoredLicense()
+      if (lic) { 
+        setOk(true)
+        setCheck(true)
+        return true
       }
-    } catch {}
+      return false
+    }
 
-    const lic = getStoredLicense()
-    if (lic) { setOk(true); setCheck(true); return }
+    // Cek pertama kali
+    if (checkLicense()) return
 
     if (LOCAL_ONLY_MODE) { setCheck(true); return }
 
@@ -59,6 +64,15 @@ function ActivationGate({ children }) {
     } else {
       setCheck(true)
     }
+
+    // Polling lisensi setiap 500ms untuk detect perubahan dari login
+    const interval = setInterval(() => {
+      if (checkLicense()) {
+        clearInterval(interval)
+      }
+    }, 500)
+
+    return () => clearInterval(interval)
   }, [])
 
   const onActivated = (lic) => {
@@ -74,10 +88,6 @@ function ActivationGate({ children }) {
     )
   }
   if (!ok) {
-    // Kalau ada flag showLogin dan sudah ada lisensi (dari aktivasi sebelumnya), tampilkan login
-    if (showLogin && getStoredLicense()) {
-      return <LoginPage />
-    }
     return <ActivationPage onActivated={onActivated} />
   }
   return children
@@ -98,6 +108,7 @@ export default function App() {
     <ActivationGate>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+        <Route path="/debug" element={<DebugPage />} />
         <Route
           path="/*"
           element={
@@ -108,25 +119,20 @@ export default function App() {
                   <Route path="/madrasah" element={<MadrasahPage />} />
                   <Route
                     path="/pengawas"
-                    element={
-                      <PrivateRoute allowed={['admin', 'pengawas', 'viewer']}>
-                        <PengawasPage />
-                      </PrivateRoute>
-                    }
+                    element={<PengawasPage />}
                   />
                   <Route path="/jadwal" element={<JadwalPage />} />
                   <Route
                     path="/instrumen"
-                    element={
-                      <PrivateRoute allowed={['admin', 'pengawas', 'viewer']}>
-                        <InstrumenPage />
-                      </PrivateRoute>
-                    }
+                    element={<InstrumenPage />}
                   />
                   <Route path="/pendampingan" element={<PendampinganPage />} />
                   <Route path="/eviden" element={<EvidenPage />} />
                   <Route path="/tindak-lanjut" element={<TindakLanjutPage />} />
                   <Route path="/laporan" element={<LaporanPage />} />
+                  <Route path="/laporan-lengkap" element={<LaporanLengkapPage />} />
+                  <Route path="/panduan" element={<PanduanPage />} />
+                  <Route path="/backup" element={<BackupRestorePage />} />
                   <Route
                     path="/pengaturan"
                     element={

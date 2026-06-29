@@ -5,17 +5,17 @@ import { useData } from '../context/DataContext.jsx'
 import { ROLE_LABELS, ROLES } from '../lib/constants.js'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: '🏠', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/pengawas', label: 'Pengawas Pendamping', icon: '🧑‍🏫', roles: ['admin', 'pengawas', 'viewer'] },
-  { to: '/madrasah', label: 'Madrasah Piloting', icon: '🏫', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/jadwal', label: 'Jadwal Pendampingan', icon: '🗓️', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/instrumen', label: 'Instrumen KBC', icon: '📋', roles: ['admin', 'pengawas', 'viewer'] },
-  { to: '/pendampingan', label: 'Hasil Pendampingan', icon: '📝', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/laporan', label: 'Capaian Madrasah Piloting', icon: '📊', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
+  { to: '/', label: 'Dashboard', icon: '🏠', roles: ['admin', 'pengawas'] },
+  { to: '/pengawas', label: 'Pengawas Pendamping', icon: '🧑‍🏫', roles: ['admin', 'pengawas'] },
+  { to: '/madrasah', label: 'Madrasah Piloting', icon: '🏫', roles: ['admin', 'pengawas'] },
+  { to: '/jadwal', label: 'Jadwal Pendampingan', icon: '🗓️', roles: ['admin', 'pengawas'] },
+  { to: '/instrumen', label: 'Instrumen KBC', icon: '📋', roles: ['admin', 'pengawas'] },
+  { to: '/pendampingan', label: 'Hasil Pendampingan', icon: '📝', roles: ['admin', 'pengawas'] },
+  { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas'] },
+  { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas'] },
+  { to: '/laporan', label: 'Capaian Madrasah Piloting', icon: '📊', roles: ['admin', 'pengawas'] },
   { to: '/laporan-lengkap', label: 'Laporan Lengkap', icon: '📖', roles: ['admin', 'pengawas'] },
-  { to: '/panduan', label: 'Panduan Penggunaan', icon: '📘', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
+  { to: '/panduan', label: 'Panduan Penggunaan', icon: '📘', roles: ['admin', 'pengawas'] },
   { to: '/backup', label: 'Backup & Restore', icon: '💾', roles: ['admin', 'pengawas'] },
   { to: '/pengaturan', label: 'Data Utama', icon: '⚙️', roles: ['admin', 'pengawas'] },
   { to: '/kode-aktivasi', label: 'Kode Aktivasi', icon: '🎫', roles: ['admin'] }

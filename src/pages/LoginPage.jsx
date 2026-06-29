@@ -29,7 +29,12 @@ export default function LoginPage() {
   }
 
   const handleActivationLink = () => {
-    // Reset hash ke halaman aktivasi, lalu reload biar ActivationGate tampilkan ActivationPage
+    // Hapus lisensi dan data aktivasi agar ActivationGate tampilkan ActivationPage
+    try {
+      localStorage.removeItem('kbc_license_v1')
+      localStorage.removeItem('kbc_local_user_v1')
+      localStorage.removeItem('kbc_auth_v1')
+    } catch {}
     window.location.hash = ''
     window.location.reload()
   }
@@ -132,6 +137,19 @@ export default function LoginPage() {
               <a href="https://wa.me/6282330647698" target="_blank" rel="noreferrer" className="text-toska-700 hover:underline">
                 Hubungi Admin
               </a>
+              {' · '}
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Hapus semua data lokal dan reset aplikasi?')) {
+                    localStorage.clear()
+                    window.location.reload()
+                  }
+                }}
+                className="text-rose-600 hover:underline"
+              >
+                Reset Data
+              </button>
             </p>
           </div>
         </div>

@@ -81,6 +81,7 @@ export default function PengaturanPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Nama Instansi"><input className="input" value={form.namaInstansi} onChange={(e) => upd('namaInstansi', e.target.value)} /></Field>
             <Field label="Sub Instansi"><input className="input" value={form.subInstansi} onChange={(e) => upd('subInstansi', e.target.value)} /></Field>
+            <Field label="Kabupaten"><input className="input" placeholder="Jember" value={form.kabupaten || ''} onChange={(e) => upd('kabupaten', e.target.value)} /></Field>
             <Field label="Tahun Pelajaran"><input className="input" placeholder="2025/2026" value={form.tahunPelajaran} onChange={(e) => upd('tahunPelajaran', e.target.value)} /></Field>
             <Field label="Ketua Pokjawas"><input className="input" value={form.ketuaPokjawas} onChange={(e) => upd('ketuaPokjawas', e.target.value)} /></Field>
             <Field label="NIP Ketua"><input className="input" value={form.nipKetua} onChange={(e) => upd('nipKetua', e.target.value)} /></Field>

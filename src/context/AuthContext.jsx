@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useData } from './DataContext.jsx'
 import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
 import { LOCAL_ONLY_MODE } from '../lib/appMode.js'
-import { getStoredLicense } from '../lib/codes.js'
+import { getStoredLicense, saveLicense } from '../lib/codes.js'
 
 const AUTH_KEY = 'kbc_auth_v1'
 const TRIAL_USER_KEY = 'kbc_trial_user_v1'
@@ -171,9 +171,10 @@ export function AuthProvider({ children }) {
             (u) => u.nama.toLowerCase() === uname && u.password === pass
           )
           if (regUser) {
+            // Normalisasi: simpan lowercase untuk konsistensi login
             found = {
               id: regUser.id,
-              username: regUser.nama,
+              username: regUser.nama.toLowerCase(),
               nama: regUser.nama,
               role: regUser.role || 'pengawas',
               password: regUser.password,
@@ -185,6 +186,19 @@ export function AuthProvider({ children }) {
       }
 
       if (!found) return { ok: false, error: 'Nama atau password salah' }
+      
+      // Pastikan ada lisensi untuk registered user (agar ActivationGate lolos)
+      const lic = getStoredLicense()
+      if (!lic && LOCAL_ONLY_MODE) {
+        // Buat lisensi bypass untuk registered user (saveLicense sudah di-import di atas)
+        saveLicense('LOGIN-BYPASS', 'pro', { 
+          via: 'login-bypass', 
+          nama: found.nama,
+          role: found.role,
+          expiresAt: Date.now() + 365 * 86400000 // 1 tahun
+        })
+      }
+      
       setUser(found)
       localStorage.setItem(AUTH_KEY, JSON.stringify(found))
       return { ok: true, user: found }

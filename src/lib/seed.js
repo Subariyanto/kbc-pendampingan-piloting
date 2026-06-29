@@ -17,6 +17,7 @@ export function buildDefaultSettings() {
 
 export function buildDefaultUsers() {
   // Akun demo. Password disimpan plaintext untuk demo lokal.
+  // Hanya 2 role: admin dan pengawas
   return [
     {
       id: uid('user'),
@@ -34,24 +35,6 @@ export function buildDefaultUsers() {
       role: 'pengawas',
       nama: 'Drs. H. Ahmad Fauzi, M.Pd',
       pengawasRef: 'pengawas-fauzi',
-      madrasahId: null
-    },
-    {
-      id: uid('user'),
-      username: 'kepala',
-      password: 'kepala123',
-      role: 'kepala',
-      nama: 'Dra. Hj. Siti Aminah, M.Ag',
-      pengawasId: null,
-      madrasahRef: 'madrasah-mtsn1'
-    },
-    {
-      id: uid('user'),
-      username: 'viewer',
-      password: 'viewer123',
-      role: 'viewer',
-      nama: 'Pimpinan Kemenag',
-      pengawasId: null,
       madrasahId: null
     }
   ]
