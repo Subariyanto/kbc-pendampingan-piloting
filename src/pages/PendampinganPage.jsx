@@ -310,7 +310,7 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                             }}
                             className={`w-7 h-7 mx-auto flex items-center justify-center rounded border text-sm font-bold transition ${
                               form.skor?.[ind.id] === s
-                                ? 'border-navy-700 bg-navy-800 text-white'
+                                ? 'border-white bg-emerald-600 text-white'
                                 : 'border-slate-300 bg-white hover:border-toska-400 hover:bg-toska-50'
                             }`}
                             title={`${s} · ${SKOR_LABELS[s]}`}
