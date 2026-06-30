@@ -78,65 +78,57 @@ export default function PendampinganPage() {
       </div>
 
       {data.length ? (
-        <div className="space-y-4">
-          {data.map((p) => {
-            const kat = p.ringkas.kategori
-            return (
-              <div key={p.id} className="card overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                      <span>{formatDate(p.tanggal)}</span>
-                      <span>•</span>
-                      <span>{p.pengawas}</span>
-                    </div>
-                    <p className="font-semibold text-navy-900 mt-1">{p.kegiatan}</p>
-                    <p className="text-sm text-slate-600">{p.madrasah}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="text-xs text-slate-500">Capaian</p>
-                      <p className="text-lg font-semibold text-navy-900">{p.ringkas.pct.toFixed(1)}%</p>
-                    </div>
-                    <Badge tone={kat.tone}>{kat.label}</Badge>
-                    <div className="flex flex-wrap gap-1">
-                      <button className="btn-ghost btn-sm" onClick={() => handlePrint(p, 'laporan')}>🖨 Laporan</button>
-                      <button className="btn-ghost btn-sm" onClick={() => handlePrint(p, 'berita-acara')}>🖨 BA</button>
-                      {scope.canEdit && <button className="btn-ghost btn-sm" onClick={() => setEditing(p)}>✎</button>}
-                      {scope.canEdit && <button className="btn-danger btn-sm" onClick={() => setConfirm(p)}>✕</button>}
-                    </div>
-                  </div>
-                </div>
-                <div className="px-5 py-4 grid grid-cols-1 lg:grid-cols-3 gap-4 text-sm">
-                  <InfoBlock label="Temuan Positif" content={p.temuanPositif} />
-                  <InfoBlock label="Permasalahan / Kendala" content={p.kendala} />
-                  <InfoBlock label="Hasil Observasi" content={p.observasi} />
-                  <InfoBlock label="Rekomendasi Pengawas" content={p.rekomendasi} />
-                  <InfoBlock label="Rencana Tindak Lanjut" content={p.rencanaTindakLanjut} />
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Status Tindak Lanjut</p>
-                    <Badge tone={STATUS_TINDAK_LANJUT_TONES[p.statusTL]}>{p.statusTL}</Badge>
-                    {p.batasTL && <p className="text-xs text-slate-500 mt-1">Batas: {formatDate(p.batasTL)}</p>}
-                    {p.buktiLink && (
-                      <p className="text-xs mt-2"><a href={p.buktiLink} target="_blank" rel="noreferrer" className="text-toska-700 hover:underline">📎 Bukti kegiatan</a></p>
-                    )}
-                  </div>
-                </div>
-                <div className="px-5 pb-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">Skor per Aspek</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                    {p.ringkas.perAspek.map((a) => (
-                      <div key={a.id} className="rounded-lg border border-slate-200 p-3">
-                        <p className="text-xs text-slate-500">Aspek {a.kode}</p>
-                        <p className="text-sm font-medium text-navy-900 line-clamp-2">{a.nama}</p>
-                        <ProgressBar value={a.pct} sublabel={`${a.total}/${a.maks}`} tone="navy" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="table-clean">
+              <thead>
+                <tr>
+                  <th className="text-left">Nama Madrasah</th>
+                  <th className="text-center w-24">Capaian</th>
+                  <th className="text-center w-32">Predikat</th>
+                  <th className="text-center w-28">Laporan</th>
+                  <th className="text-center w-24">BA</th>
+                  {scope.canEdit && <th className="text-center w-20">Edit</th>}
+                  {scope.canEdit && <th className="text-center w-20">Hapus</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((p) => {
+                  const kat = p.ringkas.kategori
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <p className="font-medium text-navy-900">{p.madrasah}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{formatDate(p.tanggal)} · {p.kegiatan}</p>
+                      </td>
+                      <td className="text-center">
+                        <span className="text-lg font-semibold text-navy-900">{p.ringkas.pct.toFixed(1)}%</span>
+                      </td>
+                      <td className="text-center">
+                        <Badge tone={kat.tone}>{kat.label}</Badge>
+                      </td>
+                      <td className="text-center">
+                        <button className="btn-ghost btn-sm" onClick={() => handlePrint(p, 'laporan')}>🖨 Laporan</button>
+                      </td>
+                      <td className="text-center">
+                        <button className="btn-ghost btn-sm" onClick={() => handlePrint(p, 'berita-acara')}>🖨 BA</button>
+                      </td>
+                      {scope.canEdit && (
+                        <td className="text-center">
+                          <button className="btn-ghost btn-sm" onClick={() => setEditing(p)}>✎</button>
+                        </td>
+                      )}
+                      {scope.canEdit && (
+                        <td className="text-center">
+                          <button className="btn-danger btn-sm" onClick={() => setConfirm(p)}>✕</button>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <EmptyState title="Belum ada hasil pendampingan" description="Tambahkan catatan hasil pendampingan untuk memulai." />
