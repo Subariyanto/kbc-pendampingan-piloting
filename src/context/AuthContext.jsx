@@ -68,6 +68,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (SUPABASE_ENABLED || !user) return
     if (user.isTrial || user.isLocalAdmin) return // local admin/trial tidak perlu sync ke state.users
+    if (user.source === 'registered') return // registered users (from activation) tidak di state.users
     const found = state.users.find((u) => u.id === user.id)
     if (!found) {
       setUser(null)
@@ -179,7 +180,8 @@ export function AuthProvider({ children }) {
               role: regUser.role || 'pengawas',
               password: regUser.password,
               pengawasId: null,
-              madrasahId: null
+              madrasahId: null,
+              source: 'registered'
             }
           }
         } catch {}
