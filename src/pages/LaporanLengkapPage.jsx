@@ -20,9 +20,15 @@ export default function LaporanLengkapPage() {
       <div className="bg-white shadow-lg max-w-[210mm] mx-auto p-12">
         {/* COVER */}
         <div className="text-center page-break">
-          <div className="w-24 h-24 mx-auto mb-6 bg-navy-900 rounded-full flex items-center justify-center">
-            <span className="text-2xl text-white font-bold">KEMENAG</span>
-          </div>
+          {settings.logoDataUrl ? (
+            <img src={settings.logoDataUrl} alt="Logo" className="w-24 h-24 mx-auto mb-6 object-contain" />
+          ) : (
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/commons/6/68/Logo_Kementerian_Agama_Republik_Indonesia.svg" 
+              alt="Logo Kemenag" 
+              className="w-24 h-24 mx-auto mb-6 object-contain"
+            />
+          )}
           <h1 className="text-2xl font-bold text-navy-900 mb-4">
             LAPORAN PENDAMPINGAN IMPLEMENTASI<br/>
             KURIKULUM BERBASIS CINTA
