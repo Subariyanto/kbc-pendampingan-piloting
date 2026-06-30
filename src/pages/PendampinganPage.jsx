@@ -6,8 +6,10 @@ import EmptyState from '../components/EmptyState.jsx'
 import PrintHeader from '../components/PrintHeader.jsx'
 import ProgressBar from '../components/ProgressBar.jsx'
 import { useData } from '../context/DataContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
+import { resolvePengawasFromUser } from '../lib/pengawasResolver.js'
 import { STATUS_TINDAK_LANJUT, SKOR_LABELS, BENTUK_KEGIATAN, MATERI_DEFAULTS } from '../lib/constants.js'
 import { formatDate, formatDateLong, searchMatch, STATUS_TINDAK_LANJUT_TONES, todayISO, kategoriKBC } from '../lib/utils.js'
 import { summarizeSkor } from '../lib/scoring.js'
@@ -23,6 +25,7 @@ const EMPTY = {
 
 export default function PendampinganPage() {
   const { state, addOrUpdate, remove } = useData()
+  const { user } = useAuth()
   const toast = useToast()
   const scope = useScope()
   const [search, setSearch] = useState('')
@@ -161,7 +164,8 @@ export default function PendampinganPage() {
           settings={state.settings}
           instrumen={state.instrumen}
           madrasah={state.madrasah.find((m) => m.id === printItem.madrasahId)}
-          pengawas={state.pengawas.find((p) => p.id === printItem.pengawasId)}
+          pengawas={state.pengawas.find((p) => p.id === printItem.pengawasId) || resolvePengawasFromUser(user, state.pengawas)}
+          user={user}
           onClose={() => setPrintItem(null)}
         />
       )}
@@ -229,12 +233,21 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
             </select>
           </Field>
           <Field label="Pengawas" required>
-            <select className="input" value={form.pengawasId} onChange={(e) => upd('pengawasId', e.target.value)} required>
+            <select className="input" value={form.pengawasId} onChange={(e) => {
+              const pid = e.target.value
+              const p = pengawasList.find((x) => x.id === pid)
+              setForm((f) => ({ ...f, pengawasId: pid, namaLengkap: p?.nama || f.namaLengkap }))
+            }} required>
               <option value="">— Pilih —</option>
               {pengawasList.map((p) => <option key={p.id} value={p.id}>{p.nama}</option>)}
             </select>
           </Field>
         </div>
+
+        <Field label="Nama Lengkap (gelar)">
+          <input className="input" value={form.namaLengkap || ''} onChange={(e) => upd('namaLengkap', e.target.value)} placeholder="Otomatis terisi saat pilih pengawas, bisa diedit" />
+        </Field>
+        <p className="text-xs text-slate-500 italic">ℹ️ NIP diambil otomatis dari data pengawas yang dipilih.</p>
 
         <Field label="Bentuk Kegiatan">
           <select
@@ -288,25 +301,28 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                         {ind.teks}
                       </p>
                       <div className="col-span-4 grid grid-cols-4 gap-1.5 items-center">
-                        {[1, 2, 3, 4].map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => {
-                              const newSkor = form.skor?.[ind.id] === s ? 0 : s
-                              updSkor(ind.id, newSkor)
-                              updKet(ind.id, newSkor ? SKOR_LABELS[newSkor] : '')
-                            }}
-                            className={`w-10 h-10 mx-auto flex items-center justify-center rounded border-2 text-base font-bold transition ${
-                              form.skor?.[ind.id] === s
-                                ? 'border-white bg-emerald-600 text-white'
-                                : 'border-slate-300 bg-white text-slate-700 hover:border-toska-400 hover:bg-toska-50'
-                            }`}
-                            title={`${s} · ${SKOR_LABELS[s]}`}
-                          >
-                            {form.skor?.[ind.id] === s ? '✓' : s}
-                          </button>
-                        ))}
+                        {[1, 2, 3, 4].map((s) => {
+                          const selected = form.skor?.[ind.id] === s
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => {
+                                const newSkor = selected ? 0 : s
+                                updSkor(ind.id, newSkor)
+                                updKet(ind.id, newSkor ? SKOR_LABELS[newSkor] : '')
+                              }}
+                              className={`w-8 h-8 mx-auto flex items-center justify-center rounded-sm border-2 text-sm font-bold transition-all ${
+                                selected
+                                  ? 'border-white bg-emerald-600 text-white shadow-md ring-2 ring-emerald-300'
+                                  : 'border-slate-300 bg-white text-transparent hover:border-toska-400 hover:bg-toska-50'
+                              }`}
+                              title={`${s} · ${SKOR_LABELS[s]}`}
+                            >
+                              {selected ? '✓' : ''}
+                            </button>
+                          )
+                        })}
                       </div>
                       <div className="col-span-3">
                         <span className={`text-xs block px-2 py-1.5 rounded ${form.keterangan?.[ind.id] ? 'bg-navy-50 text-navy-800 font-medium' : 'text-slate-400 italic'}`}>
@@ -358,7 +374,7 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
   )
 }
 
-function PrintModal({ item, mode, settings, instrumen, madrasah, pengawas, onClose }) {
+function PrintModal({ item, mode, settings, instrumen, madrasah, pengawas, user, onClose }) {
   const ringkas = summarizeSkor(item.skor, instrumen)
   const isBA = mode === 'berita-acara'
   return (
@@ -412,7 +428,7 @@ function PrintModal({ item, mode, settings, instrumen, madrasah, pengawas, onClo
           </div>
         )}
 
-        <SingleSignature tempat="Jember" tanggal={item.tanggal} namaPengawas={pengawas?.nama} nipPengawas={pengawas?.nip} namaLengkap={pengawas?.namaLengkap} />
+        <SingleSignature tempat="Jember" tanggal={item.tanggal} namaPengawas={pengawas?.nama} nipPengawas={pengawas?.nip} namaLengkap={item.namaLengkap || pengawas?.namaLengkap || user?.nama} />
       </div>
     </Modal>
   )
@@ -470,8 +486,8 @@ function SingleSignature({ tempat = 'Jember', tanggal, namaPengawas, nipPengawas
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{namaPengawas || '____________________'}</p>
-        {namaLengkap && <p className="text-xs mt-0.5">Nama Lengkap (gelar): {namaLengkap}</p>}
         {nipPengawas && <p>NIP. {nipPengawas}</p>}
+        {namaLengkap && <p className="mt-1">Nama Lengkap (gelar): {namaLengkap}</p>}
       </div>
     </div>
   )

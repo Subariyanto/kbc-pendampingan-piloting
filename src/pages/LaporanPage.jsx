@@ -6,8 +6,10 @@ import PrintHeader, { PrintSignature } from '../components/PrintHeader.jsx'
 import BarChart from '../components/BarChart.jsx'
 import RadarChart from '../components/RadarChart.jsx'
 import { useData } from '../context/DataContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
+import { resolvePengawasFromUser } from '../lib/pengawasResolver.js'
 import { JENJANG_OPTIONS, STATUS_TINDAK_LANJUT } from '../lib/constants.js'
 import {
   downloadCSV, formatDate, formatDateLong, statusMadrasahByPct, STATUS_MADRASAH_TONES, STATUS_TINDAK_LANJUT_TONES, kategoriKBC
@@ -26,6 +28,7 @@ const LAPORAN_OPTIONS = [
 
 export default function LaporanPage() {
   const { state } = useData()
+  const { user } = useAuth()
   const toast = useToast()
   const scope = useScope()
   const [jenis, setJenis] = useState('rekap')
@@ -117,8 +120,9 @@ export default function LaporanPage() {
     }
     const ids = Array.from(new Set(filteredPendampingan.map((p) => p.pengawasId).filter(Boolean)))
     if (ids.length === 1) return state.pengawas.find((p) => p.id === ids[0]) || null
-    return null
-  }, [filterPengawas, filterMadrasah, jenis, filteredPendampingan, state.pengawas, state.madrasah])
+    // Fallback ke user login
+    return resolvePengawasFromUser(user, state.pengawas)
+  }, [filterPengawas, filterMadrasah, jenis, filteredPendampingan, state.pengawas, state.madrasah, user])
 
   const exportCSV = () => {
     let rows = []

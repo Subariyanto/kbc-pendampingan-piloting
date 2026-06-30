@@ -5,8 +5,10 @@ import Badge from '../components/Badge.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import PrintHeader, { PrintSignature } from '../components/PrintHeader.jsx'
 import { useData } from '../context/DataContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
+import { resolvePengawasFromUser } from '../lib/pengawasResolver.js'
 import { STATUS_TINDAK_LANJUT } from '../lib/constants.js'
 import { formatDate, isOverdue, searchMatch, STATUS_TINDAK_LANJUT_TONES, todayISO } from '../lib/utils.js'
 import { printPrintArea } from '../lib/printHelper.js'
@@ -15,6 +17,7 @@ const EMPTY = { madrasahId: '', temuan: '', rekomendasi: '', pj: '', batas: toda
 
 export default function TindakLanjutPage() {
   const { state, addOrUpdate, remove } = useData()
+  const { user } = useAuth()
   const toast = useToast()
   const scope = useScope()
   const [search, setSearch] = useState('')
@@ -125,7 +128,7 @@ export default function TindakLanjutPage() {
                 ))}
               </tbody>
             </table>
-            <PrintSignature settings={state.settings} />
+            <PrintSignature settings={state.settings} namaPengawas={user?.nama} nipPengawas={user?.nip} namaLengkap={user?.namaLengkap || user?.nama} />
           </div>
         </Modal>
       )}

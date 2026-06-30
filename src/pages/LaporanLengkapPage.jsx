@@ -1,8 +1,12 @@
 ﻿import { useData } from '../context/DataContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { resolvePengawasFromUser } from '../lib/pengawasResolver.js'
 
 export default function LaporanLengkapPage() {
   const { state } = useData()
+  const { user } = useAuth()
   const settings = state.settings
+  const pengawas = resolvePengawasFromUser(user, state.pengawas)
   
   const handlePrint = () => {
     window.print()
@@ -59,19 +63,19 @@ export default function LaporanLengkapPage() {
             <div className="mt-12 grid grid-cols-2 gap-8">
               <div className="text-center">
                 <p>Mengetahui,</p>
-                <p className="font-semibold">Kepala Kantor</p>
-                <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
-                  (...................................)
-                </p>
-                <p>NIP. ...................................</p>
-              </div>
-              <div className="text-center">
-                <p>Ketua Pokjawas Madrasah</p>
-                <p className="font-semibold">{settings.subInstansi}</p>
+                <p className="font-semibold">Ketua Pokjawas Madrasah</p>
                 <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
                   {settings.ketuaPokjawas}
                 </p>
                 <p>NIP. {settings.nipKetua}</p>
+              </div>
+              <div className="text-center">
+                <p>Pengawas Pendamping,</p>
+                <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
+                  {pengawas?.nama || '____________________'}
+                </p>
+                <p>NIP. {pengawas?.nip || '................................'}</p>
+                {pengawas?.namaLengkap && <p className="mt-1">Nama Lengkap (gelar): {pengawas.namaLengkap}</p>}
               </div>
             </div>
           </div>
@@ -108,7 +112,8 @@ export default function LaporanLengkapPage() {
             </p>
             <div className="mt-8 text-right">
               <p>{settings.subInstansi}</p>
-              <p className="font-semibold mt-12">{settings.ketuaPokjawas}</p>
+              <p className="font-semibold mt-12">{pengawas?.nama || '____________________'}</p>
+              <p>NIP. {pengawas?.nip || '................................'}</p>
             </div>
           </div>
         </div>
@@ -569,8 +574,8 @@ export default function LaporanLengkapPage() {
             <div className="mt-8 text-right">
               <p>{settings.subInstansi}</p>
               <p>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              <p className="font-semibold mt-16">{settings.ketuaPokjawas}</p>
-              <p>NIP. {settings.nipKetua}</p>
+              <p className="font-semibold mt-16">{pengawas?.nama || '____________________'}</p>
+              <p>NIP. {pengawas?.nip || '................................'}</p>
             </div>
           </div>
         </div>

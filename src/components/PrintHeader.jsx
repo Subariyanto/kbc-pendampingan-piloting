@@ -43,8 +43,8 @@ export function PrintSignature({ settings, namaPengawas = '____________________'
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{namaPengawas}</p>
-        {namaLengkap && <p className="text-xs mt-0.5">Nama Lengkap (gelar): {namaLengkap}</p>}
         {nipPengawas && <p>NIP. {nipPengawas}</p>}
+        {namaLengkap && <p className="mt-1">Nama Lengkap (gelar): {namaLengkap}</p>}
       </div>
     </div>
   )
