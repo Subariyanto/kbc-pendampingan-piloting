@@ -23,7 +23,7 @@ export default function PrintHeader({ settings, judul = 'LAPORAN PENDAMPINGAN IM
   )
 }
 
-export function PrintSignature({ settings, namaPengawas = '____________________', nipPengawas, tanggal }) {
+export function PrintSignature({ settings, namaPengawas = '____________________', nipPengawas, tanggal, namaLengkap }) {
   const t = tanggal ? new Date(tanggal) : new Date()
   const tanggalLabel = t.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
   const namaKabupaten = settings.kabupaten || 'Jember'
@@ -43,6 +43,7 @@ export function PrintSignature({ settings, namaPengawas = '____________________'
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{namaPengawas}</p>
+        {namaLengkap && <p className="text-xs mt-0.5">Nama Lengkap (gelar): {namaLengkap}</p>}
         {nipPengawas && <p>NIP. {nipPengawas}</p>}
       </div>
     </div>

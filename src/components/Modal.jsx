@@ -29,7 +29,7 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
           <h3 className="text-base font-semibold text-navy-900">{title}</h3>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-800" aria-label="Tutup">✕</button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto">{children}</div>
+        <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">{children}</div>
         {footer && <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/60 rounded-b-2xl flex flex-wrap items-center justify-end gap-2">{footer}</div>}
       </div>
     </div>

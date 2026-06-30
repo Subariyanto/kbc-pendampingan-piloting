@@ -276,29 +276,18 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                   <p className="font-semibold text-sm text-navy-900">Aspek {aspek.kode}. {aspek.nama}</p>
                 </div>
                 <div className="px-4 py-1.5 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 items-center">
-                  <span className="col-span-4">Indikator</span>
+                  <span className="col-span-5">Indikator</span>
                   <span className="col-span-4">Skor</span>
-                  <span className="col-span-4">Catatan</span>
-                </div>
-                {/* Header angka skor */}
-                <div className="px-4 py-1 bg-navy-100/50 border-b border-slate-200 grid grid-cols-12 gap-2 items-center">
-                  <span className="col-span-4" />
-                  <div className="col-span-4 grid grid-cols-4 gap-1 text-center">
-                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">1</span>
-                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">2</span>
-                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">3</span>
-                    <span className="text-xs font-bold text-navy-800 bg-navy-100 rounded py-0.5">4</span>
-                  </div>
-                  <span className="col-span-4" />
+                  <span className="col-span-3">Catatan</span>
                 </div>
                 <div className="divide-y divide-slate-100">
                   {aspek.indikator.map((ind) => (
-                    <div key={ind.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center px-4 py-2.5">
-                      <p className="sm:col-span-4 text-sm text-slate-700">
+                    <div key={ind.id} className="grid grid-cols-12 gap-2 items-center px-4 py-2.5">
+                      <p className="col-span-5 text-sm text-slate-700">
                         <span className="text-xs font-mono text-toska-700 mr-2">{aspek.kode}{ind.nomor}</span>
                         {ind.teks}
                       </p>
-                      <div className="sm:col-span-4 grid grid-cols-4 gap-1 items-center">
+                      <div className="col-span-4 grid grid-cols-4 gap-1.5 items-center">
                         {[1, 2, 3, 4].map((s) => (
                           <button
                             key={s}
@@ -308,18 +297,18 @@ function FormPendampinganModal({ value, onClose, onSave, madrasahList, pengawasL
                               updSkor(ind.id, newSkor)
                               updKet(ind.id, newSkor ? SKOR_LABELS[newSkor] : '')
                             }}
-                            className={`w-7 h-7 mx-auto flex items-center justify-center rounded border text-sm font-bold transition ${
+                            className={`w-10 h-10 mx-auto flex items-center justify-center rounded border-2 text-base font-bold transition ${
                               form.skor?.[ind.id] === s
                                 ? 'border-white bg-emerald-600 text-white'
-                                : 'border-slate-300 bg-white hover:border-toska-400 hover:bg-toska-50'
+                                : 'border-slate-300 bg-white text-slate-700 hover:border-toska-400 hover:bg-toska-50'
                             }`}
                             title={`${s} · ${SKOR_LABELS[s]}`}
                           >
-                            {form.skor?.[ind.id] === s ? '✓' : ''}
+                            {form.skor?.[ind.id] === s ? '✓' : s}
                           </button>
                         ))}
                       </div>
-                      <div className="sm:col-span-4">
+                      <div className="col-span-3">
                         <span className={`text-xs block px-2 py-1.5 rounded ${form.keterangan?.[ind.id] ? 'bg-navy-50 text-navy-800 font-medium' : 'text-slate-400 italic'}`}>
                           {form.keterangan?.[ind.id] || '— pilih skor —'}
                         </span>
@@ -423,7 +412,7 @@ function PrintModal({ item, mode, settings, instrumen, madrasah, pengawas, onClo
           </div>
         )}
 
-        <SingleSignature tempat="Jember" tanggal={item.tanggal} namaPengawas={pengawas?.nama} nipPengawas={pengawas?.nip} />
+        <SingleSignature tempat="Jember" tanggal={item.tanggal} namaPengawas={pengawas?.nama} nipPengawas={pengawas?.nip} namaLengkap={pengawas?.namaLengkap} />
       </div>
     </Modal>
   )
@@ -471,7 +460,7 @@ function FieldWithFill({ label, required, onFill, disabled, children }) {
   )
 }
 
-function SingleSignature({ tempat = 'Jember', tanggal, namaPengawas, nipPengawas }) {
+function SingleSignature({ tempat = 'Jember', tanggal, namaPengawas, nipPengawas, namaLengkap }) {
   const t = tanggal ? new Date(tanggal) : new Date()
   const tanggalLabel = t.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
   return (
@@ -481,6 +470,7 @@ function SingleSignature({ tempat = 'Jember', tanggal, namaPengawas, nipPengawas
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{namaPengawas || '____________________'}</p>
+        {namaLengkap && <p className="text-xs mt-0.5">Nama Lengkap (gelar): {namaLengkap}</p>}
         {nipPengawas && <p>NIP. {nipPengawas}</p>}
       </div>
     </div>
