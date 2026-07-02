@@ -1,15 +1,10 @@
-// Bagian header resmi untuk dokumen cetak
+// Header dokumen: logo + nama instansi (2 kolom)
 export default function PrintHeader({ settings, judul = 'LAPORAN PENDAMPINGAN IMPLEMENTASI KBC' }) {
+  const logoSrc = settings.logoDataUrl || 'https://upload.wikimedia.org/wikipedia/commons/6/68/Logo_Kementerian_Agama_Republik_Indonesia.svg'
   return (
     <div className="pb-4 mb-4 border-b-2 border-navy-900">
-      <div className="flex items-start gap-4">
-        {settings.logoDataUrl ? (
-          <img src={settings.logoDataUrl} alt="logo" className="w-20 h-20 object-contain" />
-        ) : (
-          <div className="w-20 h-20 rounded-lg border-2 border-navy-900 flex items-center justify-center font-bold text-navy-900">
-            LOGO
-          </div>
-        )}
+      <div className="flex items-center gap-4">
+        <img src={logoSrc} alt="logo" className="w-20 h-20 object-contain" />
         <div className="flex-1 text-center font-serif">
           <p className="text-lg font-bold uppercase tracking-wide text-navy-900">{settings.namaInstansi}</p>
           <p className="text-base font-semibold uppercase text-navy-900">{settings.subInstansi}</p>

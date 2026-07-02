@@ -68,10 +68,10 @@ export const JENIS_EVIDEN = [
 ]
 
 export const SKOR_LABELS = {
-  1: 'Belum Mulai',
-  2: 'Sudah Mulai',
-  3: 'Sudah Terlaksana',
-  4: 'Terlaksana Sangat Baik'
+  0: 'Belum Mulai',
+  1: 'Sudah Mulai',
+  2: 'Sudah Terlaksana',
+  3: 'Terlaksana Sangat Baik'
 }
 
 // Aspek & indikator default. Disimpan di state agar admin dapat mengubahnya.

@@ -1,4 +1,23 @@
-export default function PageHeader({ title, description, actions, icon }) {
+export default function PageHeader({ title, description, actions, icon, compact }) {
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 mb-6">
+        {icon && (
+          <div className="w-9 h-9 rounded-lg bg-navy-900 text-white flex items-center justify-center text-base shadow-soft flex-shrink-0">
+            {icon}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg font-semibold text-navy-900 truncate">{title}</h1>
+        </div>
+        {actions && (
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {actions}
+          </div>
+        )}
+      </div>
+    )
+  }
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
       <div className="flex items-start gap-3">

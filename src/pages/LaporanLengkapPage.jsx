@@ -8,6 +8,11 @@ export default function LaporanLengkapPage() {
   const settings = state.settings
   const pengawas = resolvePengawasFromUser(user, state.pengawas)
   
+  // Fallback kalau resolver tidak match
+  const pengawasNama = pengawas?.nama || user?.nama || '____________________'
+  const pengawasNip = pengawas?.nip || user?.nip || ''
+  const pengawasNamaLengkap = pengawas?.namaLengkap || user?.namaLengkap || user?.nama || ''
+  
   const handlePrint = () => {
     window.print()
   }
@@ -72,10 +77,10 @@ export default function LaporanLengkapPage() {
               <div className="text-center">
                 <p>Pengawas Pendamping,</p>
                 <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
-                  {pengawas?.nama || '____________________'}
+                  {pengawasNama}
                 </p>
-                <p>NIP. {pengawas?.nip || '................................'}</p>
-                {pengawas?.namaLengkap && <p className="mt-1">Nama Lengkap (gelar): {pengawas.namaLengkap}</p>}
+                <p>NIP. {pengawasNip}</p>
+                {pengawasNamaLengkap && <p className="mt-1">Nama Lengkap (gelar): {pengawasNamaLengkap}</p>}
               </div>
             </div>
           </div>
@@ -321,7 +326,7 @@ export default function LaporanLengkapPage() {
             </div>
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
               <p className="text-xs text-blue-800">
-                <strong>Kriteria Penilaian:</strong> 1 = Belum Mulai | 2 = Sudah Mulai | 3 = Sudah Terlaksana | 4 = Terlaksana Sangat Baik
+                <strong>Kriteria Penilaian:</strong> 0 = Belum Mulai | 1 = Sudah Mulai | 2 = Sudah Terlaksana | 3 = Terlaksana Sangat Baik
               </p>
             </div>
           </div>

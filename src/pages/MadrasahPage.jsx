@@ -164,9 +164,10 @@ export default function MadrasahPage() {
         title="Data Madrasah Piloting"
         description="Kelola data madrasah piloting implementasi Kurikulum Berbasis Cinta."
         icon="🏫"
+        compact
         actions={
           <>
-            <button className="btn-ghost" onClick={onTemplate}>📄 Templat Excel</button>
+            <button className="btn-ghost btn-sm" onClick={onTemplate}>📄 Templat</button>
             {scope.canEditFull && (
               <>
                 <input
@@ -176,14 +177,14 @@ export default function MadrasahPage() {
                   className="hidden"
                   onChange={onImportFile}
                 />
-                <button className="btn-toska" onClick={() => fileImportRef.current?.click()}>📥 Import Excel</button>
+                <button className="btn-toska btn-sm" onClick={() => fileImportRef.current?.click()}>📥 Import</button>
               </>
             )}
-            <button className="btn-ghost" onClick={() => setPrint(true)}>🖨 Cetak</button>
-            <button className="btn-ghost" onClick={exportCSV}>⬇ CSV</button>
+            <button className="btn-ghost btn-sm" onClick={() => setPrint(true)}>🖨 Cetak</button>
+            <button className="btn-ghost btn-sm" onClick={exportCSV}>⬇ CSV</button>
             {scope.canEditFull && (
-              <button className="btn-primary" onClick={() => setEditing({ ...EMPTY, tahunPelajaran: state.settings.tahunPelajaran })}>
-                ＋ Tambah Madrasah
+              <button className="btn-primary btn-sm" onClick={() => setEditing({ ...EMPTY, tahunPelajaran: state.settings.tahunPelajaran })}>
+                ＋ Tambah
               </button>
             )}
           </>
