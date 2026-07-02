@@ -11,7 +11,7 @@ export default function PageHeader({ title, description, actions, icon, compact 
           <h1 className="text-lg font-semibold text-navy-900 truncate">{title}</h1>
         </div>
         {actions && (
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0 [&_button]:!px-2 [&_button]:!py-0.5 [&_button]:!text-xs [&_button]:!rounded-md [&_button]:!gap-0.5">
             {actions}
           </div>
         )}
