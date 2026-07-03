@@ -115,6 +115,33 @@
     print-color-adjust: exact !important;
   }
 
+  /* Font tabel cetak: 12pt konsisten semua laporan */
+  .print-area table {
+    font-size: 12pt !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  .print-area table th,
+  .print-area table td {
+    font-size: 12pt !important;
+    padding: 4px 6px !important;
+    vertical-align: top !important;
+    line-height: 1.4 !important;
+  }
+  .print-area table thead th {
+    font-weight: 600 !important;
+    background: #f1f5f9 !important;
+    border-bottom: 1.5pt solid #334155 !important;
+  }
+  .print-area table tbody td {
+    border-bottom: 0.5pt solid #cbd5e1 !important;
+  }
+  .print-area p, .print-area li, .print-area span {
+    font-size: 12pt !important;
+  }
+  .print-area h1, .print-area h2 { font-size: 14pt !important; }
+  .print-area h3, .print-area h4 { font-size: 12pt !important; }
+
   /* Cegah cut di tengah */
   table, tr, td, th { page-break-inside: avoid; }
   h1, h2, h3, h4 { page-break-after: avoid; }

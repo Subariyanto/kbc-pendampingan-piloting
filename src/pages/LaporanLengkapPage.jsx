@@ -26,7 +26,7 @@ export default function LaporanLengkapPage() {
         🖨️ Cetak PDF
       </button>
 
-      <div className="bg-white shadow-lg max-w-[210mm] mx-auto p-12">
+      <div className="print-area bg-white shadow-lg max-w-[210mm] mx-auto p-12">
         {/* COVER */}
         <div className="text-center page-break">
           {settings.logoDataUrl ? (
@@ -67,6 +67,7 @@ export default function LaporanLengkapPage() {
             
             <div className="mt-12 grid grid-cols-2 gap-8">
               <div className="text-center">
+                <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 <p>Mengetahui,</p>
                 <p className="font-semibold">Ketua Pokjawas Madrasah</p>
                 <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
@@ -75,12 +76,12 @@ export default function LaporanLengkapPage() {
                 <p>NIP. {settings.nipKetua}</p>
               </div>
               <div className="text-center">
+                <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 <p>Pengawas Pendamping,</p>
                 <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
                   {pengawasNama}
                 </p>
                 <p>NIP. {pengawasNip}</p>
-                {pengawasNamaLengkap && <p className="mt-1">Nama Lengkap (gelar): {pengawasNamaLengkap}</p>}
               </div>
             </div>
           </div>

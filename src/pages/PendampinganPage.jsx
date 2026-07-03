@@ -605,7 +605,7 @@ function SingleSignature({ tempat = 'Jember', tanggal, namaPengawas, nipPengawas
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{namaPengawas || '____________________'}</p>
         {nipPengawas && <p>NIP. {nipPengawas}</p>}
-        {namaLengkap && <p className="mt-1">Nama Lengkap (gelar): {namaLengkap}</p>}
+        {/* namaLengkap removed */}
       </div>
     </div>
   )
