@@ -79,9 +79,11 @@ export default function LaporanLengkapPage() {
                 <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 <p>Pengawas Pendamping,</p>
                 <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
-                  {pengawasNama}
+                  Subariyanto
                 </p>
                 <p>NIP. {pengawasNip}</p>
+                <p className="mt-2">Nama Lengkap dengan gelar</p>
+                <p>Subariyanto, S.Pd, M.Pd.I</p>
               </div>
             </div>
           </div>
@@ -118,8 +120,12 @@ export default function LaporanLengkapPage() {
             </p>
             <div className="mt-8 text-right">
               <p>{settings.subInstansi}</p>
-              <p className="font-semibold mt-12">{pengawas?.nama || '____________________'}</p>
+              <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <p>Pengawas Pendamping,</p>
+              <p className="font-semibold mt-12">Subariyanto</p>
               <p>NIP. {pengawas?.nip || '................................'}</p>
+              <p className="mt-2">Nama Lengkap dengan gelar</p>
+              <p>Subariyanto, S.Pd, M.Pd.I</p>
             </div>
           </div>
         </div>
@@ -579,9 +585,12 @@ export default function LaporanLengkapPage() {
 
             <div className="mt-8 text-right">
               <p>{settings.subInstansi}</p>
-              <p>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              <p className="font-semibold mt-16">{pengawas?.nama || '____________________'}</p>
+              <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <p>Pengawas Pendamping,</p>
+              <p className="font-semibold mt-16">Subariyanto</p>
               <p>NIP. {pengawas?.nip || '................................'}</p>
+              <p className="mt-2">Nama Lengkap dengan gelar</p>
+              <p>Subariyanto, S.Pd, M.Pd.I</p>
             </div>
           </div>
         </div>

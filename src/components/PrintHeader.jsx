@@ -29,7 +29,7 @@ export function PrintSignature({ settings, namaPengawas = '____________________'
       <div>
         <p>{namaKabupaten}, {tanggalLabel}</p>
         <p>Mengetahui,</p>
-        <p>Pengawas Pendamping</p>
+        <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{settings.ketuaPokjawas}</p>
         {settings.nipKetua && <p>NIP. {settings.nipKetua}</p>}
@@ -38,8 +38,10 @@ export function PrintSignature({ settings, namaPengawas = '____________________'
         <p>{namaKabupaten}, {tanggalLabel}</p>
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
-        <p className="font-semibold underline">{namaPengawas}</p>
+        <p className="font-semibold underline">Subariyanto</p>
         {nipPengawas && <p>NIP. {nipPengawas}</p>}
+        <p className="mt-2">Nama Lengkap dengan gelar</p>
+        <p>Subariyanto, S.Pd, M.Pd.I</p>
       </div>
     </div>
   )

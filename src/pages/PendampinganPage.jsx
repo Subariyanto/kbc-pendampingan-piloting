@@ -603,9 +603,10 @@ function SingleSignature({ tempat = 'Jember', tanggal, namaPengawas, nipPengawas
         <p>{tempat}, {tanggalLabel}</p>
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
-        <p className="font-semibold underline">{namaPengawas || '____________________'}</p>
+        <p className="font-semibold underline">Subariyanto</p>
         {nipPengawas && <p>NIP. {nipPengawas}</p>}
-        {/* namaLengkap removed */}
+        <p className="mt-2">Nama Lengkap dengan gelar</p>
+        <p>Subariyanto, S.Pd, M.Pd.I</p>
       </div>
     </div>
   )
