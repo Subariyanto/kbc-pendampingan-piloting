@@ -28,7 +28,6 @@ export function PrintSignature({ settings, namaPengawas = '____________________'
   return (
     <div className="grid grid-cols-2 gap-12 mt-10 text-sm font-serif">
       <div>
-        <p>{namaKabupaten}, {tanggalLabel}</p>
         <p>Mengetahui,</p>
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
@@ -38,6 +37,7 @@ export function PrintSignature({ settings, namaPengawas = '____________________'
       <div className="text-left">
         <p>{namaKabupaten}, {tanggalLabel}</p>
         <p>Pengawas Pendamping,</p>
+        <div style={{ height: 20 }} />
         <div style={{ height: 80 }} />
         <p className="font-semibold underline">{namaPengawasLengkap}</p>
         {nipPengawas && <p>NIP. {nipPengawas}</p>}

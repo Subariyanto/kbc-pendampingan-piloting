@@ -70,9 +70,8 @@ export default function LaporanLengkapPage() {
             
             <div className="mt-12 grid grid-cols-2 gap-8">
               <div className="text-center">
-                <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 <p>Mengetahui,</p>
-                <p className="font-semibold">Ketua Pokjawas Madrasah</p>
+                <p>Pengawas Pendamping,</p>
                 <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
                   {settings.ketuaPokjawas}
                 </p>
@@ -81,7 +80,8 @@ export default function LaporanLengkapPage() {
               <div className="text-center">
                 <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 <p>Pengawas Pendamping,</p>
-                <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
+                <div style={{ height: 20 }} />
+                <p className="mt-16 inline-block px-8">
                   {pengawasNamaLengkap}
                 </p>
                 <p>NIP. {pengawasNip}</p>
@@ -121,15 +121,12 @@ export default function LaporanLengkapPage() {
             </p>
             <div className="mt-8 text-right">
               <p>{settings.subInstansi}</p>
-              <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               <p>Pengawas Pendamping,</p>
-              <p className="font-semibold mt-12">{pengawasNamaLengkap}</p>
+              <div style={{ height: 20 }} />
+              <div style={{ height: 60 }} />
+              <p className="font-semibold">{pengawasNamaLengkap}</p>
               <p>NIP. {pengawasNip}</p>
             </div>
-          </div>
-        </div>
-
-        {/* DAFTAR ISI */}
         <div className="page-break">
           <h2 className="text-xl font-bold text-center text-navy-900 mb-8">DAFTAR ISI</h2>
           <div className="text-sm space-y-2">
@@ -584,9 +581,10 @@ export default function LaporanLengkapPage() {
 
             <div className="mt-8 text-right">
               <p>{settings.subInstansi}</p>
-              <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               <p>Pengawas Pendamping,</p>
-              <p className="font-semibold mt-16">{pengawasNamaLengkap}</p>
+              <div style={{ height: 20 }} />
+              <div style={{ height: 60 }} />
+              <p className="font-semibold">{pengawasNamaLengkap}</p>
               <p>NIP. {pengawasNip}</p>
             </div>
           </div>
