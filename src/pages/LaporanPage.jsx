@@ -260,7 +260,7 @@ export default function LaporanPage() {
           settings={state.settings}
           namaPengawas={pengawasTtd?.nama || '____________________'}
           nipPengawas={pengawasTtd?.nip}
-          namaLengkap={pengawasTtd?.namaLengkap}
+          namaLengkapPengawas={pengawasTtd?.namaLengkap}
         />
         <p className="mt-4 text-xs text-slate-500">Dicetak {formatDateLong(new Date())}</p>
       </div>

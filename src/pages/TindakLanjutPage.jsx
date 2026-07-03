@@ -128,7 +128,7 @@ export default function TindakLanjutPage() {
                 ))}
               </tbody>
             </table>
-            <PrintSignature settings={state.settings} namaPengawas={user?.nama} nipPengawas={user?.nip} namaLengkap={user?.namaLengkap || user?.nama} />
+            <PrintSignature settings={state.settings} namaPengawas={user?.nama} nipPengawas={user?.nip} namaLengkapPengawas={user?.namaLengkap || user?.nama} />
           </div>
         </Modal>
       )}
