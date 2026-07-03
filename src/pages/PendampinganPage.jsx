@@ -597,16 +597,17 @@ function FieldWithFill({ label, required, onFill, disabled, children }) {
 function SingleSignature({ tempat = 'Jember', tanggal, namaPengawas, nipPengawas, namaLengkap }) {
   const t = tanggal ? new Date(tanggal) : new Date()
   const tanggalLabel = t.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  // Gabung nama + gelar, uppercase
+  const namaPengawasLengkap = (namaLengkap || namaPengawas || 'SUBARIYANTO, S.PD, M.PD.I.').toUpperCase()
+  
   return (
     <div className="mt-10 text-sm font-serif flex justify-end">
       <div className="text-center" style={{ marginRight: '10%' }}>
         <p>{tempat}, {tanggalLabel}</p>
         <p>Pengawas Pendamping,</p>
         <div style={{ height: 80 }} />
-        <p className="font-semibold underline">Subariyanto</p>
+        <p className="font-semibold underline">{namaPengawasLengkap}</p>
         {nipPengawas && <p>NIP. {nipPengawas}</p>}
-        <p className="mt-2">Nama Lengkap dengan gelar</p>
-        <p>Subariyanto, S.Pd, M.Pd.I</p>
       </div>
     </div>
   )

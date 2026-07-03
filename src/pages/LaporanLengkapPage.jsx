@@ -6,12 +6,15 @@ export default function LaporanLengkapPage() {
   const { state } = useData()
   const { user } = useAuth()
   const settings = state.settings
-  const pengawas = resolvePengawasFromUser(user, state.pengawas)
   
-  // Fallback kalau resolver tidak match
-  const pengawasNama = pengawas?.nama || user?.nama || '____________________'
-  const pengawasNip = pengawas?.nip || user?.nip || ''
-  const pengawasNamaLengkap = pengawas?.namaLengkap || user?.namaLengkap || user?.nama || ''
+  // Ambil pengawas dari Data Pengawas Pendamping (yang pertama/aktif)
+  const pengawas = state.pengawas && state.pengawas.length > 0 ? state.pengawas[0] : null
+  
+  // Gabung nama + gelar, uppercase
+  const pengawasNamaLengkap = pengawas ? (
+    pengawas.namaLengkap || pengawas.nama
+  ).toUpperCase() : 'SUBARIYANTO, S.PD, M.PD.I.'
+  const pengawasNip = pengawas?.nip || ''
   
   const handlePrint = () => {
     window.print()
@@ -79,11 +82,9 @@ export default function LaporanLengkapPage() {
                 <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 <p>Pengawas Pendamping,</p>
                 <p className="mt-16 border-t border-slate-300 pt-2 inline-block px-8">
-                  Subariyanto
+                  {pengawasNamaLengkap}
                 </p>
                 <p>NIP. {pengawasNip}</p>
-                <p className="mt-2">Nama Lengkap dengan gelar</p>
-                <p>Subariyanto, S.Pd, M.Pd.I</p>
               </div>
             </div>
           </div>
@@ -122,10 +123,8 @@ export default function LaporanLengkapPage() {
               <p>{settings.subInstansi}</p>
               <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               <p>Pengawas Pendamping,</p>
-              <p className="font-semibold mt-12">Subariyanto</p>
-              <p>NIP. {pengawas?.nip || '................................'}</p>
-              <p className="mt-2">Nama Lengkap dengan gelar</p>
-              <p>Subariyanto, S.Pd, M.Pd.I</p>
+              <p className="font-semibold mt-12">{pengawasNamaLengkap}</p>
+              <p>NIP. {pengawasNip}</p>
             </div>
           </div>
         </div>
@@ -587,10 +586,8 @@ export default function LaporanLengkapPage() {
               <p>{settings.subInstansi}</p>
               <p>{settings.kabupaten || 'Jember'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               <p>Pengawas Pendamping,</p>
-              <p className="font-semibold mt-16">Subariyanto</p>
-              <p>NIP. {pengawas?.nip || '................................'}</p>
-              <p className="mt-2">Nama Lengkap dengan gelar</p>
-              <p>Subariyanto, S.Pd, M.Pd.I</p>
+              <p className="font-semibold mt-16">{pengawasNamaLengkap}</p>
+              <p>NIP. {pengawasNip}</p>
             </div>
           </div>
         </div>
