@@ -127,6 +127,9 @@ export default function LaporanLengkapPage() {
               <p className="font-semibold">{pengawasNamaLengkap}</p>
               <p>NIP. {pengawasNip}</p>
             </div>
+          </div>
+        </div>
+
         <div className="page-break">
           <h2 className="text-xl font-bold text-center text-navy-900 mb-8">DAFTAR ISI</h2>
           <div className="text-sm space-y-2">
