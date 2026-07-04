@@ -58,7 +58,6 @@ export default function PengawasPage() {
           <>
             <button className="btn-ghost" onClick={() => setPrint(true)}>🖨 Cetak</button>
             <button className="btn-ghost" onClick={exportCSV}>⬇ CSV</button>
-            {scope.canEditFull && <button className="btn-primary" onClick={() => setEditing(EMPTY)}>＋ Tambah Pengawas</button>}
           </>
         }
       />

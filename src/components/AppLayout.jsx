@@ -5,22 +5,20 @@ import { useData } from '../context/DataContext.jsx'
 import { ROLE_LABELS, ROLES } from '../lib/constants.js'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: '🏠', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/pengawas', label: 'Pengawas Pendamping', icon: '🧑‍🏫', roles: ['admin', 'pengawas', 'viewer'] },
-  { to: '/madrasah', label: 'Madrasah Piloting', icon: '🏫', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/jadwal', label: 'Jadwal Pendampingan', icon: '🗓️', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/instrumen', label: 'Instrumen KBC', icon: '📋', roles: ['admin', 'pengawas', 'viewer'] },
-  { to: '/pendampingan', label: 'Hasil Pendampingan', icon: '📝', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/laporan', label: 'Laporan', icon: '📊', roles: ['admin', 'pengawas', 'kepala', 'viewer'] },
-  { to: '/pembelian', label: 'Pengaturan Pembelian', icon: '💳', roles: ['admin'] },
-  { to: '/pengaturan', label: 'Pengaturan', icon: '⚙️', roles: ['admin'] },
-  { to: '/pengguna', label: 'Kelola Pengguna', icon: '👥', roles: ['admin'] },
-  { to: '/kode-aktivasi', label: 'Kode Aktivasi', icon: '🎫', roles: ['admin'] },
-  // Menu Lisensi (legacy mode lokal) disembunyikan; page tetap accessible via URL.
-  // { to: '/lisensi', label: 'Lisensi', icon: '🔑', roles: ['admin'] },
-  { to: '/diagnostic', label: 'Diagnostic', icon: '🩺', roles: ['admin'] }
+  { to: '/', label: 'Dashboard', icon: '🏠', roles: ['admin', 'pengawas'] },
+  { to: '/pengawas', label: 'Pengawas Pendamping', icon: '🧑‍🏫', roles: ['admin', 'pengawas'] },
+  { to: '/madrasah', label: 'Madrasah Piloting', icon: '🏫', roles: ['admin', 'pengawas'] },
+  { to: '/jadwal', label: 'Jadwal Pendampingan', icon: '🗓️', roles: ['admin', 'pengawas'] },
+  { to: '/instrumen', label: 'Instrumen KBC', icon: '📋', roles: ['admin', 'pengawas'] },
+  { to: '/pendampingan', label: 'Hasil Pendampingan', icon: '📝', roles: ['admin', 'pengawas'] },
+  { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas'] },
+  { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas'] },
+  { to: '/laporan', label: 'Capaian Madrasah Piloting', icon: '📊', roles: ['admin', 'pengawas'] },
+  { to: '/laporan-lengkap', label: 'Laporan Lengkap', icon: '📖', roles: ['admin', 'pengawas'] },
+  { to: '/panduan', label: 'Panduan Penggunaan', icon: '📘', roles: ['admin', 'pengawas'] },
+  { to: '/backup', label: 'Backup & Restore', icon: '💾', roles: ['admin', 'pengawas'] },
+  { to: '/pengaturan', label: 'Data Utama', icon: '⚙️', roles: ['admin', 'pengawas'] },
+  { to: '/kode-aktivasi', label: 'Kode Aktivasi', icon: '🎫', roles: ['admin'] }
 ]
 
 export default function AppLayout({ children }) {
@@ -40,14 +38,16 @@ export default function AppLayout({ children }) {
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar desktop */}
-      <aside className="hidden lg:flex w-64 flex-col bg-navy-950 text-white sticky top-0 h-screen no-print">
+      <aside className="hidden lg:flex w-64 flex-col bg-navy-950 text-white no-print fixed left-0 top-0 bottom-0">
         <Brand settings={settings} />
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {items.map((it) => (
             <SidebarItem key={it.to} {...it} />
           ))}
+          <div className="pt-3 border-t border-white/10 mt-3">
+            <UserBlock user={user} onLogout={onLogout} />
+          </div>
         </nav>
-        <UserBlock user={user} onLogout={onLogout} />
       </aside>
 
       {/* Sidebar mobile */}
@@ -56,19 +56,43 @@ export default function AppLayout({ children }) {
           <div className="absolute inset-0 bg-navy-950/60" onClick={() => setOpen(false)} />
           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-navy-950 text-white flex flex-col">
             <Brand settings={settings} />
-            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+            <nav className="flex-1 px-3 py-4 space-y-1">
               {items.map((it) => (
                 <SidebarItem key={it.to} {...it} onClick={() => setOpen(false)} />
               ))}
+              <div className="pt-3 border-t border-white/10 mt-3">
+                <UserBlock user={user} onLogout={onLogout} />
+              </div>
             </nav>
-            <UserBlock user={user} onLogout={onLogout} />
           </aside>
         </div>
       )}
 
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar */}
-        <header className="topbar lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 no-print">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
+        {/* Desktop topbar */}
+        <header className="hidden lg:flex sticky top-0 z-30 bg-white border-b border-slate-200 items-center justify-between px-8 py-3 no-print">
+          <div className="flex items-center gap-2">
+            {settings.logoDataUrl ? (
+              <img src={settings.logoDataUrl} alt="logo" className="w-8 h-8 rounded" />
+            ) : (
+              <div className="w-8 h-8 rounded bg-navy-900 text-white flex items-center justify-center text-xs font-semibold">KBC</div>
+            )}
+            <div className="leading-tight">
+              <p className="text-sm font-semibold text-navy-900">KBC Pendampingan Piloting</p>
+              <p className="text-[10px] text-slate-500">{settings.namaInstansi}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right text-xs text-slate-500">
+              <p className="font-medium text-slate-700">{user?.nama}</p>
+              <p>{ROLE_LABELS[user?.role] || user?.role}</p>
+            </div>
+            <button onClick={onLogout} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" title="Keluar">↩</button>
+          </div>
+        </header>
+
+        {/* Mobile topbar */}
+        <header className="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 no-print">
           <button
             onClick={() => setOpen(true)}
             className="p-2 -ml-2 rounded-lg hover:bg-slate-100"

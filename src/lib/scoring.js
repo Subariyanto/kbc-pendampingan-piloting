@@ -19,8 +19,9 @@ export function summarizeSkor(skor, instrumen) {
     const indCount = aspek.indikator.length
     const sums = aspek.indikator.reduce(
       (acc, ind) => {
-        const v = Number(skor?.[ind.id] ?? 0)
-        if (v > 0) {
+        const raw = skor?.[ind.id]
+        if (raw != null) {
+          const v = Number(raw)
           acc.terisi += 1
           acc.total += v
         }
@@ -28,7 +29,7 @@ export function summarizeSkor(skor, instrumen) {
       },
       { terisi: 0, total: 0 }
     )
-    const maks = indCount * 4
+    const maks = indCount * 3
     const pct = maks ? (sums.total / maks) * 100 : 0
     return {
       id: aspek.id,
@@ -46,7 +47,7 @@ export function summarizeSkor(skor, instrumen) {
   const totalIndikator = perAspek.reduce((a, b) => a + b.indikator, 0)
   const totalTerisi = perAspek.reduce((a, b) => a + b.terisi, 0)
   const totalSkor = perAspek.reduce((a, b) => a + b.total, 0)
-  const maksSkor = totalIndikator * 4
+  const maksSkor = totalIndikator * 3
   const avg = totalTerisi ? totalSkor / totalTerisi : 0
   const pct = maksSkor ? (totalSkor / maksSkor) * 100 : 0
 

@@ -160,35 +160,26 @@ export default function MadrasahPage() {
 
   return (
     <>
-      <PageHeader
-        title="Data Madrasah Piloting"
-        description="Kelola data madrasah piloting implementasi Kurikulum Berbasis Cinta."
-        icon="🏫"
-        actions={
-          <>
-            <button className="btn-ghost" onClick={onTemplate}>📄 Templat Excel</button>
-            {scope.canEditFull && (
-              <>
-                <input
-                  ref={fileImportRef}
-                  type="file"
-                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                  className="hidden"
-                  onChange={onImportFile}
-                />
-                <button className="btn-toska" onClick={() => fileImportRef.current?.click()}>📥 Import Excel</button>
-              </>
-            )}
-            <button className="btn-ghost" onClick={() => setPrint(true)}>🖨 Cetak</button>
-            <button className="btn-ghost" onClick={exportCSV}>⬇ CSV</button>
-            {scope.canEditFull && (
-              <button className="btn-primary" onClick={() => setEditing({ ...EMPTY, tahunPelajaran: state.settings.tahunPelajaran })}>
-                ＋ Tambah Madrasah
-              </button>
-            )}
-          </>
-        }
-      />
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-lg bg-navy-900 text-white flex items-center justify-center text-base shadow-soft">🏫</div>
+        <h1 className="text-lg font-semibold text-navy-900">Data Madrasah Piloting</h1>
+      </div>
+      <div className="mb-4 overflow-x-auto">
+        <div className="inline-flex items-center gap-1.5 whitespace-nowrap" style={{minWidth:'max-content'}}>
+          <button onClick={onTemplate} className="px-2 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-medium">📄 Templat</button>
+          {scope.canEditFull && (
+            <>
+              <input ref={fileImportRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={onImportFile} />
+              <button onClick={() => fileImportRef.current?.click()} className="px-2 py-1 text-xs rounded-md bg-[#2fa295] text-white hover:bg-[#278a7e] font-medium">📥 Import</button>
+            </>
+          )}
+          <button onClick={() => setPrint(true)} className="px-2 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-medium">🖨 Cetak</button>
+          <button onClick={exportCSV} className="px-2 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-medium">⬇ CSV</button>
+          {scope.canEditFull && (
+            <button onClick={() => setEditing({ ...EMPTY, tahunPelajaran: state.settings.tahunPelajaran })} className="px-2 py-1 text-xs rounded-md bg-navy-900 text-white hover:bg-navy-800 font-medium">＋ Tambah</button>
+          )}
+        </div>
+      </div>
 
       <div className="card-pad mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">

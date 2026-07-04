@@ -36,6 +36,9 @@
   .btn-sm {
     @apply px-2.5 py-1.5 text-xs;
   }
+  .btn-xs {
+    @apply px-2 py-1 text-xs gap-1 rounded-md;
+  }
   .input {
     @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-toska-500 focus:outline-none focus:ring-2 focus:ring-toska-100;
   }
@@ -70,8 +73,8 @@
 
 /* Print rules */
 @media print {
-  /* Reset background & color global */
-  body { background: #fff !important; color: #000 !important; margin: 0 !important; padding: 0 !important; }
+  /* Reset background & color global — TIDAK override elemen di print-area */
+  body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
 
   /* Sembunyikan elemen UI yang bukan dokumen */
   aside, nav, header, .topbar, .no-print { display: none !important; }
@@ -100,10 +103,44 @@
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
-    color: #000 !important;
     box-shadow: none !important;
     border: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
+
+  /* Preserve backgrounds for score boxes, badges, headers in print */
+  .print-area * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Font tabel cetak: 12pt konsisten semua laporan */
+  .print-area table {
+    font-size: 12pt !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  .print-area table th,
+  .print-area table td {
+    font-size: 12pt !important;
+    padding: 4px 6px !important;
+    vertical-align: top !important;
+    line-height: 1.4 !important;
+  }
+  .print-area table thead th {
+    font-weight: 600 !important;
+    background: #f1f5f9 !important;
+    border-bottom: 1.5pt solid #334155 !important;
+  }
+  .print-area table tbody td {
+    border-bottom: 0.5pt solid #cbd5e1 !important;
+  }
+  .print-area p, .print-area li, .print-area span {
+    font-size: 12pt !important;
+  }
+  .print-area h1, .print-area h2 { font-size: 14pt !important; }
+  .print-area h3, .print-area h4 { font-size: 12pt !important; }
 
   /* Cegah cut di tengah */
   table, tr, td, th { page-break-inside: avoid; }

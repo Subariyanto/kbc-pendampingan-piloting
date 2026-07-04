@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/PageHeader.jsx'
+import TrialBanner from '../components/TrialBanner.jsx'
 import StatCard from '../components/StatCard.jsx'
 import BarChart from '../components/BarChart.jsx'
 import RadarChart from '../components/RadarChart.jsx'
@@ -66,6 +67,7 @@ export default function DashboardPage() {
 
   return (
     <>
+      <TrialBanner />
       <PageHeader
         title={`Selamat datang, ${user?.nama || ''}`}
         description="Ringkasan progres pendampingan madrasah piloting Kurikulum Berbasis Cinta."

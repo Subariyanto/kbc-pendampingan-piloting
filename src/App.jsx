@@ -13,43 +13,66 @@ import PendampinganPage from './pages/PendampinganPage.jsx'
 import EvidenPage from './pages/EvidenPage.jsx'
 import TindakLanjutPage from './pages/TindakLanjutPage.jsx'
 import LaporanPage from './pages/LaporanPage.jsx'
+import LaporanLengkapPage from './pages/LaporanLengkapPage.jsx'
+import PanduanPage from './pages/PanduanPage.jsx'
+import BackupRestorePage from './pages/BackupRestorePage.jsx'
 import PengaturanPage from './pages/PengaturanPage.jsx'
 import DiagnosticPage from './pages/DiagnosticPage.jsx'
+import DebugPage from './pages/DebugPage.jsx'
 import PenggunaPage from './pages/PenggunaPage.jsx'
 import LisensiPage from './pages/LisensiPage.jsx'
 import PembelianPage from './pages/PembelianPage.jsx'
 import KodeAktivasiPage from './pages/KodeAktivasiPage.jsx'
 import { getStoredLicense, saveLicense } from './lib/codes.js'
 import { SUPABASE_ENABLED, supabase } from './lib/supabase.js'
+import { LOCAL_ONLY_MODE } from './lib/appMode.js'
 
 // --- Gate: cek lisensi dari localStorage, redirect ke halaman aktivasi kalau belum ---
-// Admin (mode Supabase) auto-bypass aktivasi
 function ActivationGate({ children }) {
   const [ok, setOk] = useState(false)
   const [check, setCheck] = useState(false)
 
   useEffect(() => {
-    const lic = getStoredLicense()
-    if (lic) { setOk(true); setCheck(true); return }
+    // Fungsi untuk cek lisensi (bisa dipanggil berulang)
+    const checkLicense = () => {
+      const lic = getStoredLicense()
+      if (lic) { 
+        setOk(true)
+        setCheck(true)
+        return true
+      }
+      return false
+    }
 
-    // Admin bypass: kalau ada session Supabase dan role admin, auto-aktivasi
+    // Cek pertama kali
+    if (checkLicense()) return
+
+    if (LOCAL_ONLY_MODE) { setCheck(true); return }
+
     if (SUPABASE_ENABLED) {
       supabase.auth.getSession().then(async ({ data }) => {
         if (data?.session?.user) {
           const { data: profile } = await supabase
             .from('profiles').select('role').eq('id', data.session.user.id).maybeSingle()
-          if (profile?.role === 'admin') {
-            saveLicense('ADMIN-BYPASS', 'pro', {})
-            setOk(true)
-            setCheck(true)
-            return
-          }
+          saveLicense(profile?.role === 'admin' ? 'ADMIN-BYPASS' : 'AUTH-BYPASS', 'pro', { via: 'auth-bypass' })
+          setOk(true)
+          setCheck(true)
+          return
         }
         setCheck(true)
       }).catch(() => setCheck(true))
     } else {
       setCheck(true)
     }
+
+    // Polling lisensi setiap 500ms untuk detect perubahan dari login
+    const interval = setInterval(() => {
+      if (checkLicense()) {
+        clearInterval(interval)
+      }
+    }, 500)
+
+    return () => clearInterval(interval)
   }, [])
 
   const onActivated = (lic) => {
@@ -64,7 +87,9 @@ function ActivationGate({ children }) {
       </div>
     )
   }
-  if (!ok) return <ActivationPage onActivated={onActivated} />
+  if (!ok) {
+    return <ActivationPage onActivated={onActivated} />
+  }
   return children
 }
 
@@ -83,6 +108,7 @@ export default function App() {
     <ActivationGate>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+        <Route path="/debug" element={<DebugPage />} />
         <Route
           path="/*"
           element={
@@ -93,29 +119,24 @@ export default function App() {
                   <Route path="/madrasah" element={<MadrasahPage />} />
                   <Route
                     path="/pengawas"
-                    element={
-                      <PrivateRoute allowed={['admin', 'pengawas', 'viewer']}>
-                        <PengawasPage />
-                      </PrivateRoute>
-                    }
+                    element={<PengawasPage />}
                   />
                   <Route path="/jadwal" element={<JadwalPage />} />
                   <Route
                     path="/instrumen"
-                    element={
-                      <PrivateRoute allowed={['admin', 'pengawas', 'viewer']}>
-                        <InstrumenPage />
-                      </PrivateRoute>
-                    }
+                    element={<InstrumenPage />}
                   />
                   <Route path="/pendampingan" element={<PendampinganPage />} />
                   <Route path="/eviden" element={<EvidenPage />} />
                   <Route path="/tindak-lanjut" element={<TindakLanjutPage />} />
                   <Route path="/laporan" element={<LaporanPage />} />
+                  <Route path="/laporan-lengkap" element={<LaporanLengkapPage />} />
+                  <Route path="/panduan" element={<PanduanPage />} />
+                  <Route path="/backup" element={<BackupRestorePage />} />
                   <Route
                     path="/pengaturan"
                     element={
-                      <PrivateRoute allowed={['admin']}>
+                      <PrivateRoute allowed={['admin', 'pengawas']}>
                         <PengaturanPage />
                       </PrivateRoute>
                     }

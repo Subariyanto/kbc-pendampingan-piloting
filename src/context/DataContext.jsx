@@ -3,7 +3,25 @@ import { STORAGE_KEY, uid } from '../lib/utils.js'
 import { buildEmptyData } from '../lib/seed.js'
 import { buildDefaultInstrumen } from '../lib/constants.js'
 import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
+import { LOCAL_ONLY_MODE } from '../lib/appMode.js'
 import * as repo from '../lib/repository.js'
+
+// Cek trial mode: kalau ada lisensi tier=demo + trial user di localStorage,
+// paksa mode lokal supaya tidak panggil Supabase (yang akan ditolak RLS).
+function isTrialMode() {
+  try {
+    const lic = JSON.parse(localStorage.getItem('kbc_license_v1') || 'null')
+    if (lic?.tier !== 'demo') return false
+    if (lic.expiresAt && Date.now() > lic.expiresAt) return false
+    const trialUser = localStorage.getItem('kbc_trial_user_v1')
+    return !!trialUser
+  } catch { return false }
+}
+
+// Data aplikasi pakai Supabase HANYA jika:
+// - LOCAL_ONLY_MODE = false (mode multi-tenant Supabase, dimatikan default)
+// - Bukan trial mode
+const USE_REMOTE = SUPABASE_ENABLED && !LOCAL_ONLY_MODE && !isTrialMode()
 
 const DataContext = createContext(null)
 
@@ -29,12 +47,12 @@ function saveToStorage(state) {
 
 export function DataProvider({ children }) {
   const [state, setState] = useState(() => loadFromStorage() ?? buildEmptyData())
-  const [loading, setLoading] = useState(SUPABASE_ENABLED)
+  const [loading, setLoading] = useState(USE_REMOTE)
   const [remoteError, setRemoteError] = useState(null)
 
-  // Kalau Supabase aktif, refresh state dari Supabase saat session berubah (login/logout/initial).
+  // Kalau Supabase aktif (dan bukan trial), refresh state dari Supabase saat session berubah.
   useEffect(() => {
-    if (!SUPABASE_ENABLED) return
+    if (!USE_REMOTE) return
     let cancelled = false
 
     const fetchSnapshot = async (session) => {
@@ -83,11 +101,11 @@ export function DataProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    if (!SUPABASE_ENABLED) saveToStorage(state)
+    if (!USE_REMOTE) saveToStorage(state)
   }, [state])
 
   const upsertCollection = useCallback(async (key, item) => {
-    if (SUPABASE_ENABLED) {
+    if (USE_REMOTE) {
       // Mode Supabase: kirim ke server dulu, baru update local pakai data dari server.
       // ID dibiarkan kosong saat insert agar Postgres yang generate UUID.
       const isUpdate = !!item.id
@@ -140,7 +158,7 @@ export function DataProvider({ children }) {
 
   const removeFromCollection = useCallback(async (key, id) => {
     setState((prev) => ({ ...prev, [key]: (prev[key] ?? []).filter((x) => x.id !== id) }))
-    if (SUPABASE_ENABLED) {
+    if (USE_REMOTE) {
       try { await repo.deleteItem(key, id) } catch (err) {
         console.error('Supabase delete error:', err)
         setRemoteError(err.message)
@@ -150,14 +168,14 @@ export function DataProvider({ children }) {
 
   const updateSettings = useCallback(async (patch) => {
     setState((prev) => ({ ...prev, settings: { ...prev.settings, ...patch } }))
-    if (SUPABASE_ENABLED) {
+    if (USE_REMOTE) {
       try { await repo.updateSettingsRemote({ ...state.settings, ...patch }) } catch (err) { setRemoteError(err.message) }
     }
   }, [state.settings])
 
   const setInstrumenLocal = useCallback(async (instrumen) => {
     setState((prev) => ({ ...prev, instrumen }))
-    if (SUPABASE_ENABLED) {
+    if (USE_REMOTE) {
       try { await repo.replaceInstrumen(instrumen) } catch (err) { setRemoteError(err.message) }
     }
   }, [])
@@ -167,7 +185,7 @@ export function DataProvider({ children }) {
   }, [setInstrumenLocal])
 
   const resetAll = useCallback(() => {
-    if (SUPABASE_ENABLED) {
+    if (USE_REMOTE) {
       console.warn('Reset data demo dinonaktifkan saat Supabase aktif. Hapus data lewat dashboard Supabase.')
       return
     }
@@ -183,14 +201,15 @@ export function DataProvider({ children }) {
       if (!data[k]) throw new Error(`Field "${k}" tidak ditemukan pada backup`)
     }
     setState(data)
-    if (SUPABASE_ENABLED) {
+    if (USE_REMOTE) {
       await repo.pushFullSnapshot(data)
     }
   }, [])
 
   const value = useMemo(
     () => ({
-      state, loading, remoteError, mode: SUPABASE_ENABLED ? 'supabase' : 'local',
+      state, loading, remoteError,
+      mode: USE_REMOTE ? 'supabase' : (isTrialMode() ? 'trial' : 'local'),
       addOrUpdate: upsertCollection,
       remove: removeFromCollection,
       updateSettings,

@@ -3,16 +3,12 @@ import { uid } from './utils.js'
 
 export const ROLES = {
   ADMIN: 'admin',
-  PENGAWAS: 'pengawas',
-  KEPALA: 'kepala',
-  VIEWER: 'viewer'
+  PENGAWAS: 'pengawas'
 }
 
 export const ROLE_LABELS = {
   admin: 'Admin',
-  pengawas: 'Pengawas Madrasah',
-  kepala: 'Kepala Madrasah',
-  viewer: 'Viewer / Pimpinan'
+  pengawas: 'Pengawas Madrasah'
 }
 
 export const JENJANG_OPTIONS = ['RA', 'MI', 'MTs', 'MA', 'MAK']
@@ -72,10 +68,10 @@ export const JENIS_EVIDEN = [
 ]
 
 export const SKOR_LABELS = {
-  1: 'Belum Terlaksana',
-  2: 'Mulai Terlaksana',
-  3: 'Terlaksana',
-  4: 'Sangat Baik'
+  0: 'Belum Mulai',
+  1: 'Sudah Mulai',
+  2: 'Sudah Terlaksana',
+  3: 'Terlaksana Sangat Baik'
 }
 
 // Aspek & indikator default. Disimpan di state agar admin dapat mengubahnya.

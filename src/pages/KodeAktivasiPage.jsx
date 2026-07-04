@@ -1,186 +1,258 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import PageHeader from '../components/PageHeader.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import Modal from '../components/Modal.jsx'
 import { useToast } from '../context/ToastContext.jsx'
-import { useData } from '../context/DataContext.jsx'
-import { SUPABASE_ENABLED } from '../lib/supabase.js'
 import {
-  listActivationCodes,
-  createActivationCode,
-  deleteActivationCode,
-  resetActivationCode
-} from '../lib/repository.js'
+  generateSignedCode,
+  TIER_OPTIONS,
+  getAdminCodes,
+  addAdminCode,
+  updateAdminCode,
+  deleteAdminCode,
+  saveAdminCodes,
+  getRevokedCodes,
+  addRevokedCode,
+  removeRevokedCode
+} from '../lib/signedLicense.js'
+import { downloadJSON, readJSONFile } from '../lib/utils.js'
 
-const ROLE_LABEL = {
-  admin: 'Admin (Ketua Pokjawas)',
-  pengawas: 'Pengawas Madrasah',
-  kepala: 'Kepala Madrasah',
-  viewer: 'Viewer (Read Only)'
+const TIER_TONES = {
+  pro: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  basic: 'bg-toska-100 text-toska-800 border-toska-200',
+  demo: 'bg-amber-100 text-amber-800 border-amber-200'
 }
 
-const ROLE_TONES = {
-  admin: 'bg-amber-100 text-amber-900 border-amber-200',
-  pengawas: 'bg-toska-100 text-toska-900 border-toska-200',
-  kepala: 'bg-navy-100 text-navy-900 border-navy-200',
-  viewer: 'bg-slate-100 text-slate-700 border-slate-200'
+const STATUS_TONES = {
+  aktif: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  belum_aktif: 'bg-sky-100 text-sky-800 border-sky-300'
 }
 
-// Generate kode random: KBC-XXXX-YYYY
-function generateRandomCode(prefix = 'KBC') {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const seg = (n) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-  return `${prefix}-${seg(4)}-${seg(4)}`
+const STATUS_LABELS = {
+  aktif: '✅ Aktif',
+  belum_aktif: '⏳ Belum Aktif'
 }
 
 export default function KodeAktivasiPage() {
-  const { state } = useData()
   const toast = useToast()
   const [codes, setCodes] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [revoked, setRevoked] = useState([])
   const [creating, setCreating] = useState(false)
-  const [filterStatus, setFilterStatus] = useState('all') // 'all' | 'unused' | 'used'
-  const [filterRole, setFilterRole] = useState('all')
   const [search, setSearch] = useState('')
+  const [filterTier, setFilterTier] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const fileInputRef = useRef(null)
 
-  const refresh = async () => {
-    setLoading(true)
-    try {
-      const list = await listActivationCodes()
-      setCodes(list)
-    } catch (err) {
-      toast.error('Gagal load kode: ' + err.message)
-    } finally {
-      setLoading(false)
-    }
+  const refresh = () => {
+    setCodes(getAdminCodes())
+    setRevoked(getRevokedCodes())
   }
 
-  useEffect(() => {
-    if (!SUPABASE_ENABLED) { setLoading(false); return }
-    refresh()
-  }, [])
+  useEffect(() => { refresh() }, [])
+
+  const getStatus = (c) => {
+    if (c.status === 'aktif' || c.soldTo) return 'aktif'
+    return 'belum_aktif'
+  }
 
   const filtered = useMemo(() => {
     return codes.filter((c) => {
-      if (filterStatus === 'used' && !c.used) return false
-      if (filterStatus === 'unused' && c.used) return false
-      if (filterRole !== 'all' && c.role !== filterRole) return false
+      const status = getStatus(c)
+      if (filterStatus !== 'all' && filterStatus !== status) return false
+      if (filterTier !== 'all' && c.tier !== filterTier) return false
       if (search) {
         const q = search.toLowerCase()
-        return c.code.toLowerCase().includes(q) || (c.nama || '').toLowerCase().includes(q)
+        return c.code.toLowerCase().includes(q) ||
+               (c.soldTo || '').toLowerCase().includes(q) ||
+               (c.note || '').toLowerCase().includes(q)
       }
       return true
     })
-  }, [codes, filterStatus, filterRole, search])
+  }, [codes, revoked, search, filterTier, filterStatus])
 
   const stats = useMemo(() => ({
     total: codes.length,
-    used: codes.filter((c) => c.used).length,
-    unused: codes.filter((c) => !c.used).length,
-    byRole: codes.reduce((acc, c) => {
-      acc[c.role] = (acc[c.role] || 0) + 1
-      return acc
-    }, {})
+    aktif: codes.filter((c) => getStatus(c) === 'aktif').length,
+    belumAktif: codes.filter((c) => getStatus(c) === 'belum_aktif').length
   }), [codes])
 
-  const onCopyCode = (code) => {
+  const onCopy = (code) => {
     navigator.clipboard.writeText(code)
-      .then(() => toast.success(`Kode ${code} disalin`))
+      .then(() => toast.success('Kode disalin'))
       .catch(() => toast.error('Gagal menyalin'))
   }
 
-  if (!SUPABASE_ENABLED) {
-    return (
-      <>
-        <PageHeader title="Kelola Kode Aktivasi" icon="🎫" />
-        <div className="card-pad">
-          <p className="text-sm text-slate-700">
-            Manajemen kode aktivasi hanya tersedia di mode Supabase. Aktifkan koneksi Supabase di settings.
-          </p>
-        </div>
-      </>
-    )
+  const onAktifkan = (code, namaPengawas) => {
+    updateAdminCode(code, { soldTo: namaPengawas, soldAt: Date.now(), status: 'aktif' })
+    refresh()
+    toast.success(`Kode diaktifkan untuk ${namaPengawas}`)
+  }
+
+  const onNonaktifkan = (code) => {
+    updateAdminCode(code, { soldTo: null, soldAt: null, status: 'belum_aktif' })
+    refresh()
+    toast.success('Kode dinonaktifkan')
+  }
+
+  const onDelete = (record) => {
+    deleteAdminCode(record.code)
+    refresh()
+    toast.success('Kode dihapus')
+    setConfirmDelete(null)
+  }
+
+  const onExport = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      version: 1,
+      codes: getAdminCodes(),
+      revoked: getRevokedCodes()
+    }
+    downloadJSON(`kbc-admin-codes-${new Date().toISOString().slice(0, 10)}.json`, payload)
+    toast.success('Daftar kode diekspor')
+  }
+
+  const onPrint = () => {
+    const now = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+    const rows = filtered.map((c, i) => {
+      const status = getStatus(c)
+      return `<tr>
+        <td style="text-align:center;padding:6px 8px;border:1px solid #333">${i + 1}</td>
+        <td style="font-family:monospace;font-size:11px;padding:6px 8px;border:1px solid #333">${c.code}</td>
+        <td style="padding:6px 8px;border:1px solid #333">${c.label}</td>
+        <td style="padding:6px 8px;border:1px solid #333">${c.soldTo || '—'}</td>
+        <td style="padding:6px 8px;border:1px solid #333;text-align:center">${status === 'aktif' ? '✅ Aktif' : '⏳ Belum Aktif'}</td>
+        <td style="padding:6px 8px;border:1px solid #333;font-size:11px">${c.issuedAt ? new Date(c.issuedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+      </tr>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html><head><title>Cetak Kode Aktivasi</title>
+<style>
+  body{font-family:Arial,sans-serif;margin:20px;font-size:12px}
+  .header{display:flex;align-items:center;gap:12px;border-bottom:3px solid #102a4d;padding-bottom:10px;margin-bottom:16px}
+  .header img{width:60px;height:60px}
+  .header h2{margin:0;color:#102a4d;font-size:16px}
+  .header p{margin:2px 0;color:#555;font-size:11px}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th{background:#102a4d;color:white;padding:8px;border:1px solid #333;font-size:11px;text-align:center}
+  .footer{margin-top:24px;text-align:right;font-size:11px}
+  @media print{body{margin:0}.no-print{display:none}}
+</style></head><body>
+<div class="header">
+  <img src="https://subariyanto.github.io/kbc-pendampingan-piloting/logo.png" alt="logo"/>
+  <div>
+    <h2>Kode Aktivasi</h2>
+    <p>Pokjawas Madrasah Kabupaten Jember</p>
+    <p>Dicetak: ${now} | Total: ${filtered.length} kode</p>
+  </div>
+</div>
+<table>
+  <thead><tr><th style="width:30px">No</th><th>Kode</th><th>Tier</th><th>Nama Pengawas</th><th>Status</th><th>Diterbitkan</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="footer"><p>Jember, ${now}<br/>Pengawas Madrasah</p><br/><br/><p><strong>Subariyanto, S.Pd, M.Pd.I</strong><br/>NIP. 197002122005011004</p></div>
+</body></html>`
+
+    const w = window.open('', '_blank')
+    if (w) {
+      w.document.write(html)
+      w.document.close()
+      w.focus()
+      w.print()
+    } else {
+      toast.error('Popup diblokir browser')
+    }
+  }
+
+  const onImport = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const data = await readJSONFile(file)
+      if (!data || !Array.isArray(data.codes)) throw new Error('Format file tidak valid')
+      const existing = getAdminCodes()
+      const merged = [...existing]
+      let added = 0
+      for (const c of data.codes) {
+        if (!merged.find((x) => x.code === c.code)) {
+          merged.push(c)
+          added++
+        }
+      }
+      saveAdminCodes(merged)
+      refresh()
+      toast.success(`${added} kode baru di-import`)
+    } catch (err) {
+      toast.error('Gagal import: ' + err.message)
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
   }
 
   return (
     <>
       <PageHeader
-        title="Kelola Kode Aktivasi"
-        description="Terbitkan kode aktivasi untuk pengawas, kepala madrasah, atau viewer. User pakai kode ini untuk daftar tanpa email."
+        title="Kode Aktivasi"
+        description="Terbitkan dan kelola kode aktivasi untuk pengawas madrasah."
         icon="🎫"
         actions={
           <>
-            <button className="btn-ghost" onClick={refresh} disabled={loading}>
-              {loading ? 'Memuat…' : '↻ Refresh'}
-            </button>
-            <button className="btn-primary" onClick={() => setCreating(true)}>
-              ＋ Terbitkan Kode
-            </button>
+            <button className="btn-ghost" onClick={onExport}>📥 Export</button>
+            <input ref={fileInputRef} type="file" accept="application/json,.json" className="hidden" onChange={onImport} />
+            <button className="btn-ghost" onClick={() => fileInputRef.current?.click()}>📤 Import</button>
+            <button className="btn-ghost" onClick={onPrint}>🖨️ Cetak</button>
+            <button className="btn-primary" onClick={() => setCreating(true)}>➕ Terbitkan Kode</button>
           </>
         }
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="card-pad">
           <p className="text-xs text-slate-500">Total Kode</p>
           <p className="text-2xl font-bold text-navy-900">{stats.total}</p>
         </div>
         <div className="card-pad">
-          <p className="text-xs text-slate-500">Belum Dipakai</p>
-          <p className="text-2xl font-bold text-toska-700">{stats.unused}</p>
+          <p className="text-xs text-slate-500">✅ Aktif</p>
+          <p className="text-2xl font-bold text-emerald-700">{stats.aktif}</p>
         </div>
         <div className="card-pad">
-          <p className="text-xs text-slate-500">Sudah Dipakai</p>
-          <p className="text-2xl font-bold text-emerald-700">{stats.used}</p>
+          <p className="text-xs text-slate-500">⏳ Belum Aktif</p>
+          <p className="text-2xl font-bold text-sky-700">{stats.belumAktif}</p>
         </div>
-        <div className="card-pad">
-          <p className="text-xs text-slate-500">Per Role</p>
-          <p className="text-xs text-slate-700 mt-1 leading-tight">
-            {Object.entries(stats.byRole).map(([r, n]) => (
-              <span key={r} className="inline-block mr-2">
-                <span className="font-medium capitalize">{r}</span>: {n}
-              </span>
-            ))}
-          </p>
-        </div>
+      </div>
+
+      {/* Info tracking manual */}
+      <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 mb-4 text-xs text-sky-800">
+        <strong>💡 Cara kerja:</strong> Saat memberikan kode ke pengawas, klik <strong>Aktifkan</strong> dan isi nama pengawas. Status otomatis berubah jadi ✅ Aktif. Data aktivasi sebenarnya tersimpan di browser masing-masing pengawas (localStorage).
       </div>
 
       {/* Filter */}
       <div className="card-pad mb-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <input
-            className="input"
-            placeholder="🔍 Cari kode atau nama…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <select className="input" value={filterTier} onChange={(e) => setFilterTier(e.target.value)}>
+            <option value="all">Semua tier</option>
+            <option value="pro">Pro Lifetime</option>
+            <option value="basic">Basic Lifetime</option>
+            <option value="demo">Trial</option>
+          </select>
           <select className="input" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
             <option value="all">Semua status</option>
-            <option value="unused">Belum dipakai</option>
-            <option value="used">Sudah dipakai</option>
-          </select>
-          <select className="input" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
-            <option value="all">Semua role</option>
-            <option value="admin">Admin</option>
-            <option value="pengawas">Pengawas</option>
-            <option value="kepala">Kepala Madrasah</option>
-            <option value="viewer">Viewer</option>
+            <option value="aktif">Aktif</option>
+            <option value="belum_aktif">Belum Aktif</option>
           </select>
         </div>
       </div>
 
-      {/* List */}
+      {/* Table */}
       <div className="card overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-slate-500">Memuat daftar kode…</div>
-        ) : filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState
-            title={codes.length === 0 ? 'Belum ada kode aktivasi' : 'Tidak ada kode yang cocok'}
+            title={codes.length === 0 ? 'Belum ada kode' : 'Tidak ada yang cocok'}
             description={codes.length === 0
-              ? 'Klik "Terbitkan Kode" untuk membuat kode aktivasi pertama.'
-              : 'Coba ubah filter atau kata kunci.'
+              ? 'Klik "Terbitkan Kode" untuk membuat kode pertama.'
+              : 'Ubah filter atau kata kunci.'
             }
           />
         ) : (
@@ -188,31 +260,25 @@ export default function KodeAktivasiPage() {
             <table className="table-clean">
               <thead>
                 <tr>
+                  <th className="w-[100px]">Aksi</th>
+                  <th className="w-[30px] text-center">No</th>
                   <th>Kode</th>
-                  <th>Untuk (Nama)</th>
-                  <th>Role</th>
                   <th>Tier</th>
-                  <th>Status</th>
-                  <th>Dibuat</th>
-                  <th className="text-right">Aksi</th>
+                  <th className="text-center">Nama Pengawas</th>
+                  <th className="text-center">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
+                {filtered.map((c, idx) => (
                   <CodeRow
-                    key={c.id}
-                    code={c}
-                    onCopy={() => onCopyCode(c.code)}
+                    key={c.code}
+                    no={idx + 1}
+                    record={c}
+                    status={getStatus(c)}
+                    onCopy={() => onCopy(c.code)}
+                    onAktifkan={(nama) => onAktifkan(c.code, nama)}
+                    onNonaktifkan={() => onNonaktifkan(c.code)}
                     onDelete={() => setConfirmDelete(c)}
-                    onReset={async () => {
-                      try {
-                        await resetActivationCode(c.id)
-                        toast.success('Kode di-reset, bisa dipakai lagi')
-                        await refresh()
-                      } catch (err) {
-                        toast.error('Gagal reset: ' + err.message)
-                      }
-                    }}
                   />
                 ))}
               </tbody>
@@ -223,13 +289,8 @@ export default function KodeAktivasiPage() {
 
       {creating && (
         <CreateCodeModal
-          pengawasList={state.pengawas}
-          madrasahList={state.madrasah}
           onClose={() => setCreating(false)}
-          onSaved={async () => {
-            setCreating(false)
-            await refresh()
-          }}
+          onSaved={() => { setCreating(false); refresh() }}
         />
       )}
 
@@ -237,202 +298,191 @@ export default function KodeAktivasiPage() {
         <Modal
           open
           onClose={() => setConfirmDelete(null)}
-          title="Hapus Kode Aktivasi"
+          title="Hapus Kode"
           footer={
             <>
               <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Batal</button>
-              <button
-                className="btn-danger"
-                onClick={async () => {
-                  try {
-                    await deleteActivationCode(confirmDelete.id)
-                    toast.success('Kode dihapus')
-                    setConfirmDelete(null)
-                    await refresh()
-                  } catch (err) {
-                    toast.error('Gagal hapus: ' + err.message)
-                  }
-                }}
-              >
-                Hapus
-              </button>
+              <button className="btn-danger" onClick={() => onDelete(confirmDelete)}>Hapus</button>
             </>
           }
         >
           <p className="text-sm">
             Yakin menghapus kode <strong className="font-mono">{confirmDelete.code}</strong>?
           </p>
-          {confirmDelete.used && (
-            <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
-              ⚠️ Kode ini sudah dipakai. Akun user yang terdaftar tidak akan terhapus, tapi kode tidak akan ada lagi di daftar.
-            </p>
-          )}
+          <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
+            ⚠️ Catatan dihapus dari daftar. Kode tetap valid di browser yang sudah aktivasi.
+          </p>
         </Modal>
       )}
     </>
   )
 }
 
-function CodeRow({ code, onCopy, onDelete, onReset }) {
+function CodeRow({ no, record, status, onCopy, onAktifkan, onNonaktifkan, onDelete }) {
+  const [editingNama, setEditingNama] = useState(false)
+  const [namaPengawas, setNamaPengawas] = useState(record.soldTo || '')
+
+  const isAktif = status === 'aktif'
+
   return (
     <tr>
+      {/* AKSI — tombol di kiri */}
+      <td className="whitespace-nowrap">
+        {!isAktif ? (
+          <button
+            className="px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm"
+            onClick={() => {
+              const nama = record.soldTo || prompt('Nama pengawas yang menerima kode:')
+              if (nama?.trim()) onAktifkan(nama.trim())
+            }}
+          >
+            ✅ Aktifkan
+          </button>
+        ) : (
+          <button
+            className="px-3 py-1.5 rounded-md text-xs font-semibold bg-sky-500 text-white hover:bg-sky-600 transition shadow-sm"
+            onClick={onNonaktifkan}
+          >
+            ⏸ Nonaktifkan
+          </button>
+        )}
+        <button className="ml-1 p-1.5 rounded text-slate-400 hover:text-rose-600 transition" onClick={onDelete} title="Hapus">🗑</button>
+      </td>
+
+      {/* NO */}
+      <td className="text-center text-xs text-slate-500">{no}</td>
+
+      {/* KODE */}
       <td>
-        <button onClick={onCopy} className="font-mono text-sm font-semibold text-navy-900 hover:text-toska-700 cursor-pointer flex items-center gap-1" title="Klik untuk salin">
-          <span>{code.code}</span>
-          <span className="text-xs">📋</span>
+        <button onClick={onCopy} className="font-mono text-xs font-semibold text-navy-900 hover:text-toska-700 cursor-pointer flex items-center gap-1" title="Klik untuk salin">
+          <span className="break-all">{record.code}</span>
+          <span className="text-[10px]">📋</span>
         </button>
-        {code.note && <p className="text-xs text-slate-500 mt-0.5">{code.note}</p>}
       </td>
+
+      {/* TIER */}
       <td>
-        <p className="font-medium text-navy-900">{code.nama}</p>
-      </td>
-      <td>
-        <span className={`inline-block px-2 py-0.5 rounded border text-xs font-medium ${ROLE_TONES[code.role] || ROLE_TONES.viewer}`}>
-          {ROLE_LABEL[code.role] || code.role}
+        <span className={`inline-block px-2 py-0.5 rounded border text-xs font-medium ${TIER_TONES[record.tier]}`}>
+          {record.label}
         </span>
       </td>
-      <td>
-        {code.tier === 'demo' ? (
-          <span className="inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 text-xs font-medium" title={`Trial ${code.validityDays || 0} hari sejak aktivasi`}>
-            ⏳ Trial {code.validityDays || 0}h
-          </span>
-        ) : (
-          <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-medium">
-            ♾️ Pro
-          </span>
-        )}
-      </td>
-      <td>
-        {code.used ? (
-          <div>
-            <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-medium">
-              ✓ Dipakai
-            </span>
-            {(code.usedByNama || code.usedByEmail) && (
-              <p className="text-xs text-navy-900 font-medium mt-1 leading-tight">
-                {code.usedByNama || code.usedByEmail}
-                {code.usedByNama && code.usedByEmail && (
-                  <span className="block text-[10px] text-slate-500 font-normal">{code.usedByEmail}</span>
-                )}
-              </p>
-            )}
-            {code.usedAt && (
-              <p className="text-[10px] text-slate-500 mt-1">
-                {new Date(code.usedAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+
+      {/* NAMA PENGAWAS — tengah */}
+      <td className="text-center">
+        {editingNama ? (
+          <input
+            className="input input-sm text-xs text-center"
+            value={namaPengawas}
+            onChange={(e) => setNamaPengawas(e.target.value)}
+            placeholder="Nama pengawas"
+            autoFocus
+            onBlur={() => {
+              if (namaPengawas.trim()) {
+                onAktifkan(namaPengawas.trim())
+              } else {
+                onNonaktifkan()
+              }
+              setEditingNama(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (namaPengawas.trim()) onAktifkan(namaPengawas.trim())
+                else onNonaktifkan()
+                setEditingNama(false)
+              }
+            }}
+          />
+        ) : record.soldTo ? (
+          <div className="cursor-pointer hover:text-toska-700" onClick={() => { setNamaPengawas(record.soldTo); setEditingNama(true) }}>
+            <p className="font-semibold text-navy-900 text-sm">{record.soldTo}</p>
+            {record.soldAt && (
+              <p className="text-[10px] text-slate-500">
+                sejak {new Date(record.soldAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
               </p>
             )}
           </div>
         ) : (
-          <span className="inline-block px-2 py-0.5 rounded bg-toska-100 text-toska-800 text-xs font-medium">
-            ⌛ Tersedia
-          </span>
-        )}
-      </td>
-      <td className="text-xs text-slate-500">
-        {code.createdAt ? new Date(code.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-      </td>
-      <td className="text-right whitespace-nowrap">
-        {code.used && (
-          <button className="btn-ghost btn-sm mr-1" onClick={onReset} title="Reset (kode bisa dipakai lagi)">
-            ↺
+          <button className="text-xs text-slate-400 hover:text-toska-700" onClick={() => setEditingNama(true)}>
+            <span className="italic">belum diisi</span>
           </button>
         )}
-        <button className="btn-danger btn-sm" onClick={onDelete} title="Hapus kode">✕</button>
       </td>
+
+      {/* STATUS */}
+      <td className="text-center">
+        <span className={`inline-block px-2.5 py-1 rounded-full border text-xs font-semibold ${STATUS_TONES[status]}`}>
+          {STATUS_LABELS[status]}
+        </span>
+      </td>
+
     </tr>
   )
 }
 
-function CreateCodeModal({ pengawasList, madrasahList, onClose, onSaved }) {
+function CreateCodeModal({ onClose, onSaved }) {
   const toast = useToast()
-  const [form, setForm] = useState({
-    code: generateRandomCode(),
-    role: 'pengawas',
-    nama: '',
-    pengawasId: '',
-    madrasahId: '',
-    note: '',
-    tier: 'pro',
-    validityDays: 0
-  })
-  const [bulkMode, setBulkMode] = useState(false)
-  const [bulkCount, setBulkCount] = useState(5)
-  const [saving, setSaving] = useState(false)
+  const [tierKey, setTierKey] = useState('PRO')
+  const [bulkCount, setBulkCount] = useState(1)
+  const [namaPengawas, setNamaPengawas] = useState('')
+  const [note, setNote] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [results, setResults] = useState([])
 
-  const update = (k) => (e) => setForm({ ...form, [k]: e.target.value })
-
-  // Sinkron tier ↔ validityDays default
-  const setTier = (tier) => {
-    setForm({
-      ...form,
-      tier,
-      validityDays: tier === 'demo' ? (form.validityDays > 0 ? form.validityDays : 7) : 0
-    })
-  }
-
-  const onRegenerate = () => {
-    setForm({ ...form, code: generateRandomCode() })
-  }
-
-  const onSubmit = async (e) => {
+  const handleGenerate = async (e) => {
     e.preventDefault()
-    if (!form.nama.trim()) {
-      toast.error('Nama wajib diisi (untuk identifikasi pemilik kode)')
-      return
-    }
-    if (form.role === 'pengawas' && !form.pengawasId) {
-      toast.error('Pilih pengawas terkait')
-      return
-    }
-    if (form.role === 'kepala' && !form.madrasahId) {
-      toast.error('Pilih madrasah terkait')
-      return
-    }
-
-    setSaving(true)
+    const count = Math.min(50, Math.max(1, parseInt(bulkCount) || 1))
+    setGenerating(true)
     try {
-      const tierPayload = {
-        tier: form.tier,
-        validityDays: form.tier === 'demo' ? (Number(form.validityDays) || 7) : 0
-      }
-      if (bulkMode) {
-        const count = Math.min(50, Math.max(1, parseInt(bulkCount) || 1))
-        let successCount = 0
-        for (let i = 0; i < count; i++) {
-          try {
-            await createActivationCode({
-              code: generateRandomCode(),
-              role: form.role,
-              nama: count > 1 ? `${form.nama} ${i + 1}` : form.nama,
-              pengawasId: form.pengawasId || null,
-              madrasahId: form.madrasahId || null,
-              note: form.note,
-              ...tierPayload
-            })
-            successCount++
-          } catch (err) {
-            console.error('Bulk create error:', err)
-          }
+      const generated = []
+      for (let i = 0; i < count; i++) {
+        const c = await generateSignedCode(tierKey)
+        const record = {
+          ...c,
+          soldTo: namaPengawas.trim() || null,
+          soldAt: namaPengawas.trim() ? Date.now() : null,
+          status: namaPengawas.trim() ? 'aktif' : 'belum_aktif',
+          note: note.trim()
         }
-        toast.success(`${successCount}/${count} kode berhasil dibuat`)
-      } else {
-        await createActivationCode({
-          code: form.code,
-          role: form.role,
-          nama: form.nama,
-          pengawasId: form.pengawasId || null,
-          madrasahId: form.madrasahId || null,
-          note: form.note,
-          ...tierPayload
-        })
-        toast.success('Kode aktivasi diterbitkan')
+        addAdminCode(record)
+        generated.push(record)
       }
-      await onSaved()
+      setResults(generated)
+      toast.success(`${count} kode berhasil diterbitkan`)
     } catch (err) {
       toast.error('Gagal: ' + err.message)
     } finally {
-      setSaving(false)
+      setGenerating(false)
     }
+  }
+
+  const onCopyAll = () => {
+    const text = results.map((r) => r.code).join('\n')
+    navigator.clipboard.writeText(text).then(() => toast.success('Semua kode disalin'))
+  }
+
+  if (results.length > 0) {
+    return (
+      <Modal
+        open
+        onClose={onClose}
+        title="Kode Berhasil Diterbitkan"
+        footer={
+          <>
+            <button className="btn-ghost" onClick={onCopyAll}>📋 Salin Semua</button>
+            <button className="btn-primary" onClick={onSaved}>Selesai</button>
+          </>
+        }
+      >
+        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-3 mb-3">
+          ✅ {results.length} kode berhasil dibuat{results[0]?.soldTo ? ` untuk ${results[0].soldTo}` : ''}. Salin & kirim kode ke pengawas.
+        </p>
+        <div className="bg-slate-900 text-emerald-300 font-mono text-xs p-3 rounded max-h-64 overflow-y-auto space-y-1">
+          {results.map((r) => (
+            <div key={r.code} className="break-all">{r.code}</div>
+          ))}
+        </div>
+      </Modal>
+    )
   }
 
   return (
@@ -443,157 +493,78 @@ function CreateCodeModal({ pengawasList, madrasahList, onClose, onSaved }) {
       footer={
         <>
           <button className="btn-ghost" type="button" onClick={onClose}>Batal</button>
-          <button className="btn-primary" type="submit" form="codeForm" disabled={saving}>
-            {saving ? 'Menerbitkan…' : (bulkMode ? `Terbitkan ${bulkCount} Kode` : 'Terbitkan')}
+          <button className="btn-primary" type="submit" form="codeForm" disabled={generating}>
+            {generating ? 'Generating...' : `Terbitkan ${bulkCount > 1 ? bulkCount + ' Kode' : 'Kode'}`}
           </button>
         </>
       }
     >
-      <form id="codeForm" onSubmit={onSubmit} className="space-y-3">
-        <div className="bg-toska-50 border border-toska-200 rounded p-3 text-xs text-toska-900">
-          ℹ️ User pakai kode ini di halaman aktivasi → akun otomatis dibuat dengan role yang dipilih, langsung login. Tidak perlu email/password.
+      <form id="codeForm" onSubmit={handleGenerate} className="space-y-3">
+        <div className="bg-sky-50 border border-sky-200 rounded p-3 text-xs text-sky-900">
+          💡 Kode ditandatangani offline pakai HMAC-SHA256. Bisa diaktivasi tanpa internet.
         </div>
 
-        {/* Mode toggle */}
-        <div className="flex gap-2 text-sm">
-          <button
-            type="button"
-            onClick={() => setBulkMode(false)}
-            className={`flex-1 py-2 rounded border ${!bulkMode ? 'bg-navy-900 text-white border-navy-900' : 'bg-white border-slate-200 text-slate-600'}`}
-          >
-            Satu Kode
-          </button>
-          <button
-            type="button"
-            onClick={() => setBulkMode(true)}
-            className={`flex-1 py-2 rounded border ${bulkMode ? 'bg-navy-900 text-white border-navy-900' : 'bg-white border-slate-200 text-slate-600'}`}
-          >
-            Bulk (banyak kode)
-          </button>
+        <div>
+          <label className="label">Nama Pengawas <span className="text-slate-400 text-[10px]">(opsional)</span></label>
+          <input
+            className="input"
+            value={namaPengawas}
+            onChange={(e) => setNamaPengawas(e.target.value)}
+            placeholder="Kosongkan jika belum tahu penerimanya"
+          />
+          <p className="text-[10px] text-slate-500 mt-1">Jika diisi → kode langsung berstatus <strong>Aktif</strong>. Kosongkan → <strong>Belum Aktif</strong>.</p>
         </div>
 
-        {!bulkMode && (
-          <div>
-            <label className="label">Kode Aktivasi</label>
-            <div className="flex gap-2">
-              <input
-                className="input font-mono uppercase tracking-wider flex-1"
-                value={form.code}
-                onChange={update('code')}
-                placeholder="KBC-XXXX-XXXX"
-                required
-              />
-              <button type="button" className="btn-ghost" onClick={onRegenerate} title="Generate kode baru">
-                🎲
-              </button>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">Klik 🎲 untuk generate kode random, atau ketik manual.</p>
+        <div>
+          <label className="label">Tier / Jenis Lisensi</label>
+          <div className="grid grid-cols-1 gap-2">
+            {TIER_OPTIONS.map((opt) => (
+              <label
+                key={opt.key}
+                className={`flex items-center gap-3 p-3 rounded border cursor-pointer transition ${tierKey === opt.key ? 'border-navy-900 bg-navy-50 ring-1 ring-navy-200' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <input
+                  type="radio"
+                  name="tier"
+                  value={opt.key}
+                  checked={tierKey === opt.key}
+                  onChange={() => setTierKey(opt.key)}
+                />
+                <div className="flex-1">
+                  <p className="font-medium text-navy-900">{opt.label}</p>
+                  <p className="text-xs text-slate-500">
+                    {opt.expiryDays > 0 ? `Berlaku ${opt.expiryDays} hari` : 'Lifetime — tidak expired'}
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded ${TIER_TONES[opt.tier]}`}>
+                  {opt.tier.toUpperCase()}
+                </span>
+              </label>
+            ))}
           </div>
-        )}
+        </div>
 
-        {bulkMode && (
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Jumlah Kode</label>
             <input
-              className="input"
               type="number"
+              className="input"
               min="1"
               max="50"
               value={bulkCount}
               onChange={(e) => setBulkCount(e.target.value)}
             />
-            <p className="text-xs text-slate-500 mt-1">Maks 50 kode sekaligus. Setiap kode di-generate random.</p>
           </div>
-        )}
-
-        <div>
-          <label className="label">Role</label>
-          <select className="input" value={form.role} onChange={update('role')}>
-            <option value="admin">Admin (Ketua Pokjawas)</option>
-            <option value="pengawas">Pengawas Madrasah</option>
-            <option value="kepala">Kepala Madrasah</option>
-            <option value="viewer">Viewer (Read Only)</option>
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label">Tier</label>
-            <select className="input" value={form.tier} onChange={(e) => setTier(e.target.value)}>
-              <option value="pro">Pro — Lifetime</option>
-              <option value="demo">Trial — Masa Berlaku Terbatas</option>
-            </select>
+            <label className="label">Catatan <span className="text-slate-400 text-[10px]">(opsional)</span></label>
+            <input
+              className="input"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="mis. KKMA 04 batch Juni"
+            />
           </div>
-          {form.tier === 'demo' && (
-            <div>
-              <label className="label">Masa Berlaku (hari)</label>
-              <input
-                className="input"
-                type="number"
-                min="1"
-                max="365"
-                value={form.validityDays}
-                onChange={update('validityDays')}
-                placeholder="7"
-              />
-            </div>
-          )}
-        </div>
-        {form.tier === 'demo' ? (
-          <p className="text-xs text-amber-700 -mt-1">
-            ⏳ User akan otomatis logout & lisensi expired setelah {Number(form.validityDays) || 7} hari sejak aktivasi.
-          </p>
-        ) : (
-          <p className="text-xs text-emerald-700 -mt-1">
-            ♾️ Kode Pro = akses selamanya, tidak ada expired.
-          </p>
-        )}
-
-        <div>
-          <label className="label">{bulkMode ? 'Nama Dasar (akan diberi suffix #1, #2, …)' : 'Nama Pemilik Kode'}</label>
-          <input
-            className="input"
-            value={form.nama}
-            onChange={update('nama')}
-            placeholder={bulkMode ? 'mis. Pengawas Batch Juli 2026' : 'mis. Drs. H. Ahmad Fauzi, M.Pd'}
-            required
-          />
-        </div>
-
-        {form.role === 'pengawas' && (
-          <div>
-            <label className="label">Pengawas Terkait (data master)</label>
-            <select className="input" value={form.pengawasId} onChange={update('pengawasId')} required>
-              <option value="">— pilih —</option>
-              {pengawasList.map((p) => (
-                <option key={p.id} value={p.id}>{p.nama} {p.nip && `(${p.nip})`}</option>
-              ))}
-            </select>
-            <p className="text-xs text-slate-500 mt-1">User yang aktivasi akan otomatis terhubung ke pengawas ini.</p>
-          </div>
-        )}
-
-        {form.role === 'kepala' && (
-          <div>
-            <label className="label">Madrasah Terkait</label>
-            <select className="input" value={form.madrasahId} onChange={update('madrasahId')} required>
-              <option value="">— pilih —</option>
-              {madrasahList.map((m) => (
-                <option key={m.id} value={m.id}>{m.nama} ({m.jenjang})</option>
-              ))}
-            </select>
-            <p className="text-xs text-slate-500 mt-1">User yang aktivasi akan otomatis terhubung ke madrasah ini.</p>
-          </div>
-        )}
-
-        <div>
-          <label className="label">Catatan (opsional)</label>
-          <input
-            className="input"
-            value={form.note}
-            onChange={update('note')}
-            placeholder="mis. Untuk Bapak Fauzi, KKMA 04"
-          />
         </div>
       </form>
     </Modal>

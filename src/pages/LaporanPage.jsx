@@ -6,8 +6,10 @@ import PrintHeader, { PrintSignature } from '../components/PrintHeader.jsx'
 import BarChart from '../components/BarChart.jsx'
 import RadarChart from '../components/RadarChart.jsx'
 import { useData } from '../context/DataContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useScope } from '../lib/useScope.js'
+import { resolvePengawasFromUser } from '../lib/pengawasResolver.js'
 import { JENJANG_OPTIONS, STATUS_TINDAK_LANJUT } from '../lib/constants.js'
 import {
   downloadCSV, formatDate, formatDateLong, statusMadrasahByPct, STATUS_MADRASAH_TONES, STATUS_TINDAK_LANJUT_TONES, kategoriKBC
@@ -26,6 +28,7 @@ const LAPORAN_OPTIONS = [
 
 export default function LaporanPage() {
   const { state } = useData()
+  const { user } = useAuth()
   const toast = useToast()
   const scope = useScope()
   const [jenis, setJenis] = useState('rekap')
@@ -46,7 +49,6 @@ export default function LaporanPage() {
     if (tglAkhir && t > new Date(tglAkhir).getTime() + 24 * 60 * 60 * 1000 - 1) return false
     return true
   }
-
   const filteredMadrasah = useMemo(() => {
     return scope.madrasah
       .filter((m) => !filterJenjang || m.jenjang === filterJenjang)
@@ -104,6 +106,23 @@ export default function LaporanPage() {
         }
       })
   }, [state.pengawas, scope, filteredMadrasah, filteredPendampingan, state.instrumen])
+
+  // Tentukan pengawas pendamping untuk blok Tanda Tangan:
+  // 1. Filter Pengawas dipilih -> pakai itu
+  // 2. Report 'madrasah' -> pakai pengawas madrasah tersebut
+  // 3. Pendampingan yang ditampilkan semuanya dari 1 pengawas -> pakai dia
+  // 4. Lebih dari 1 pengawas / kosong -> null (fallback ke ketua pokjawas saja)
+  const pengawasTtd = useMemo(() => {
+    if (filterPengawas) return state.pengawas.find((p) => p.id === filterPengawas) || null
+    if (jenis === 'madrasah' && filterMadrasah) {
+      const m = state.madrasah.find((mm) => mm.id === filterMadrasah)
+      if (m?.pengawasId) return state.pengawas.find((p) => p.id === m.pengawasId) || null
+    }
+    const ids = Array.from(new Set(filteredPendampingan.map((p) => p.pengawasId).filter(Boolean)))
+    if (ids.length === 1) return state.pengawas.find((p) => p.id === ids[0]) || null
+    // Fallback ke user login
+    return resolvePengawasFromUser(user, state.pengawas)
+  }, [filterPengawas, filterMadrasah, jenis, filteredPendampingan, state.pengawas, state.madrasah, user])
 
   const exportCSV = () => {
     let rows = []
@@ -237,7 +256,12 @@ export default function LaporanPage() {
         {jenis === 'tindak' && <SectionTindakLanjut data={filteredTL} madrasah={state.madrasah} />}
         {jenis === 'eviden' && <SectionEviden data={filteredEviden} madrasah={state.madrasah} />}
 
-        <PrintSignature settings={state.settings} />
+        <PrintSignature
+          settings={state.settings}
+          namaPengawas={pengawasTtd?.nama || '____________________'}
+          nipPengawas={pengawasTtd?.nip}
+          namaLengkapPengawas={pengawasTtd?.namaLengkap}
+        />
         <p className="mt-4 text-xs text-slate-500">Dicetak {formatDateLong(new Date())}</p>
       </div>
     </>

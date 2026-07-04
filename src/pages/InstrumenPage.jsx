@@ -66,7 +66,7 @@ export default function InstrumenPage() {
     <>
       <PageHeader
         title="Instrumen Monitoring KBC"
-        description="Aspek dan indikator penilaian implementasi Kurikulum Berbasis Cinta. Skor 1 (Belum Terlaksana) – 4 (Sangat Baik)."
+        description="Aspek dan indikator penilaian implementasi Kurikulum Berbasis Cinta. Skor 0 (Belum Mulai) – 3 (Terlaksana Sangat Baik)."
         icon="📋"
         actions={
           <>
@@ -94,7 +94,7 @@ export default function InstrumenPage() {
                 <div>
                   <p className="text-xs uppercase tracking-wider text-toska-700 font-semibold">Aspek {aspek.kode}</p>
                   <p className="font-semibold text-navy-900">{aspek.nama}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{aspek.indikator.length} indikator · maks {aspek.indikator.length * 4} poin</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{aspek.indikator.length} indikator · maks {aspek.indikator.length * 3} poin</p>
                 </div>
                 {canEdit && (
                   <div className="flex gap-2">
@@ -169,7 +169,7 @@ export default function InstrumenPage() {
         >
           <div className="print-area bg-white p-6">
             <PrintHeader settings={state.settings} judul="INSTRUMEN MONITORING IMPLEMENTASI KBC" />
-            <p className="text-xs text-slate-600 mb-3">Skor: 1=Belum Terlaksana · 2=Mulai Terlaksana · 3=Terlaksana · 4=Sangat Baik</p>
+            <p className="text-xs text-slate-600 mb-3">Skor: 0=Belum Mulai · 1=Sudah Mulai · 2=Sudah Terlaksana · 3=Terlaksana Sangat Baik</p>
             {instrumen.map((aspek) => (
               <div key={aspek.id} className="mb-4">
                 <p className="font-semibold text-navy-900">Aspek {aspek.kode}. {aspek.nama}</p>

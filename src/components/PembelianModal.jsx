@@ -1,9 +1,21 @@
-import { getPembelianInfo } from '../lib/pembelian.js'
+import { useEffect, useState } from 'react'
+import { fetchPembelianInfo, getPembelianInfo } from '../lib/pembelian.js'
 
 // Modal "Beli Lisensi FULL" — tampilkan info pembelian + tombol WA
 export default function PembelianModal({ open, onClose }) {
+  // Render dengan cache lokal dulu (instant), lalu refresh dari Supabase
+  const [info, setInfo] = useState(getPembelianInfo)
+
+  useEffect(() => {
+    if (!open) return
+    let active = true
+    fetchPembelianInfo().then((latest) => {
+      if (active) setInfo(latest)
+    }).catch(() => {})
+    return () => { active = false }
+  }, [open])
+
   if (!open) return null
-  const info = getPembelianInfo()
   const waNumber = String(info.wa || '').replace(/[^0-9]/g, '')
   const waMessage = encodeURIComponent(
     `Halo Pak Subariyanto, saya tertarik untuk membeli Lisensi FULL aplikasi Pendampingan KBC. Mohon info lebih lanjut. Terima kasih.`
