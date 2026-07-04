@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { STORAGE_KEY, uid } from '../lib/utils.js'
-import { buildSeedData } from '../lib/seed.js'
+import { buildEmptyData } from '../lib/seed.js'
 import { buildDefaultInstrumen } from '../lib/constants.js'
 import { SUPABASE_ENABLED, supabase } from '../lib/supabase.js'
 import * as repo from '../lib/repository.js'
@@ -28,7 +28,7 @@ function saveToStorage(state) {
 }
 
 export function DataProvider({ children }) {
-  const [state, setState] = useState(() => loadFromStorage() ?? buildSeedData())
+  const [state, setState] = useState(() => loadFromStorage() ?? buildEmptyData())
   const [loading, setLoading] = useState(SUPABASE_ENABLED)
   const [remoteError, setRemoteError] = useState(null)
 
@@ -171,7 +171,7 @@ export function DataProvider({ children }) {
       console.warn('Reset data demo dinonaktifkan saat Supabase aktif. Hapus data lewat dashboard Supabase.')
       return
     }
-    const fresh = buildSeedData()
+    const fresh = buildEmptyData()
     setState(fresh)
     saveToStorage(fresh)
   }, [])

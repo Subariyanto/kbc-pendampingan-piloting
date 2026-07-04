@@ -57,6 +57,21 @@ export function buildDefaultUsers() {
   ]
 }
 
+export function buildEmptyData() {
+  return {
+    settings: buildDefaultSettings(),
+    instrumen: buildDefaultInstrumen(),
+    pengawas: [],
+    madrasah: [],
+    jadwal: [],
+    pendampingan: [],
+    tindakLanjut: [],
+    eviden: [],
+    users: buildDefaultUsers(),
+    meta: { createdAt: todayISO(), version: 1 }
+  }
+}
+
 export function buildSeedData() {
   const instrumen = buildDefaultInstrumen()
 
