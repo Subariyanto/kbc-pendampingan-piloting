@@ -125,10 +125,13 @@ ${x}`}class ar extends Error{constructor({message:r,code:t,cause:n,name:a}){var 
       margin-bottom:${i*m-i+16}px;
     `;const j=document.createElement("div");j.style.cssText="position:absolute;bottom:12px;right:20px;font-size:10px;color:#94a3b8;font-family:system-ui",j.textContent=`Halaman ${y+1} dari ${f}`,E.appendChild(j);const N=document.createElement("div");N.style.cssText=`position:absolute;top:${l}px;left:${l}px;right:${l}px;height:${u}px;overflow:hidden`;const M=r.cloneNode(!0);if(M.style.cssText=`width:${s-l*2}px;position:absolute;top:${-(y*u)}px;left:0`,N.appendChild(M),E.appendChild(N),n){const I=document.createElement("div");I.style.cssText="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:72px;font-weight:900;color:rgba(220,38,38,0.12);letter-spacing:6px;pointer-events:none;white-space:nowrap;z-index:10",I.textContent=`TRIAL — ${a} HARI`,E.appendChild(I)}x.appendChild(E)}g.appendChild(x),document.body.appendChild(g),document.body.style.overflow="hidden";const v=()=>{g.remove(),document.body.style.overflow=""};g.querySelector("#pp-btn-close").addEventListener("click",v),g.addEventListener("keydown",y=>{y.key==="Escape"&&v()}),g.querySelector("#pp-btn-print").addEventListener("click",()=>{g.style.display="none";const y=document.createElement("style");y.id="print-helper-print-css",y.textContent=`
       @media print {
-        body > *:not(.print-area) { display:none !important; }
+        body * { visibility:hidden !important; }
+        .print-area, .print-area * { visibility:visible !important; }
         .print-area {
           display:block !important;
-          position:static !important;
+          position:absolute !important;
+          top:0 !important;
+          left:0 !important;
           width:100% !important;
           max-width:none !important;
           margin:0 !important;
