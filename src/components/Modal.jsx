@@ -22,7 +22,7 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
     xl: 'max-w-6xl'
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 no-print">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-navy-950/50" onClick={onClose} aria-hidden="true" />
       <div className={`relative bg-white w-full ${sizes[size] || sizes.md} rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh]`}>
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">

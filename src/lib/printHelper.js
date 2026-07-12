@@ -114,34 +114,17 @@ export function printPrintArea({ title = 'Cetak' } = {}) {
   overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') close() })
 
   overlay.querySelector('#pp-btn-print').addEventListener('click', () => {
-    // Hide overlay, inject print CSS, print, then restore
+    // Hide overlay, print pakai .print-area asli (sama seperti Laporan Lengkap
+    // yang panggil window.print() langsung) — biar konsisten pakai satu-satunya
+    // aturan @media print global di index.css, bukan CSS tambahan yang bisa
+    // ketimpa/konflik dengan struktur DOM (nested print-area, modal, dll).
     overlay.style.display = 'none'
-
-    const printCSS = document.createElement('style')
-    printCSS.id = 'print-helper-print-css'
-    printCSS.textContent = `
-      @media print {
-        body > *:not(.print-area) { display:none !important; }
-        .print-area {
-          display:block !important;
-          position:static !important;
-          width:100% !important;
-          max-width:none !important;
-          margin:0 !important;
-          padding:0 !important;
-          box-shadow:none !important;
-        }
-        @page { margin:10mm; }
-      }
-    `
-    document.head.appendChild(printCSS)
 
     const origTitle = document.title
     document.title = title + (isTrial ? ' — TRIAL' : '')
 
     const cleanup = () => {
       document.title = origTitle
-      printCSS.remove()
       overlay.remove()
       document.body.style.overflow = ''
       window.removeEventListener('afterprint', cleanup)
