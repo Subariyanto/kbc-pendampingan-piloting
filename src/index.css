@@ -95,6 +95,12 @@
   .fixed > .relative > div:first-child { display: none !important; } /* modal header bar */
   .fixed > .relative > div { overflow: visible !important; max-height: none !important; }
 
+  /* Sembunyikan konten halaman lain di luar print-area (mis. tabel/kalender di balik
+     modal pratinjau cetak) supaya tidak ikut tercetak & bikin halaman berantakan.
+     Hanya aktif kalau ada .print-area di halaman ini (jaga perilaku lama untuk
+     halaman tanpa fitur cetak, mis. Dashboard/Panduan). */
+  body:has(.print-area) main > *:not(.print-area):not(:has(.print-area)) { display: none !important; }
+
   /* Print-area: full width, no absolute positioning (biar paginate normal) */
   .print-area {
     position: static !important;

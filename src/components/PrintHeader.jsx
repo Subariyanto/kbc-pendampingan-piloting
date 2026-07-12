@@ -25,14 +25,21 @@ export function PrintSignature({ settings, namaPengawas = '____________________'
   // Gabung nama + gelar jadi 1 baris uppercase
   const namaPengawasLengkap = namaLengkapPengawas ? namaLengkapPengawas.toUpperCase() : namaPengawas.toUpperCase()
 
+  // Kalau pengawas yang membuat laporan adalah Ketua Pokjawas sendiri, blok "Mengetahui"
+  // tidak bisa mengetahui dirinya sendiri -> pindah ke Kepala Kemenag.
+  const isKetuaSendiri = namaSamaOrang(namaPengawasLengkap, settings.ketuaPokjawas)
+  const atasanNama = isKetuaSendiri ? (settings.kepalaKemenag || '____________________') : (settings.ketuaPokjawas || '____________________')
+  const atasanNip = isKetuaSendiri ? settings.nipKepalaKemenag : settings.nipKetua
+  const atasanJabatan = isKetuaSendiri ? 'Kepala Kantor Kementerian Agama' : 'Pengawas Pendamping'
+
   return (
     <div className="grid grid-cols-2 gap-12 mt-10 text-sm font-serif">
       <div>
         <p>Mengetahui,</p>
-        <p>Pengawas Pendamping,</p>
+        <p>{atasanJabatan},</p>
         <div style={{ height: 80 }} />
-        <p className="font-semibold underline">{settings.ketuaPokjawas}</p>
-        {settings.nipKetua && <p>NIP. {settings.nipKetua}</p>}
+        <p className="font-semibold underline">{atasanNama}</p>
+        {atasanNip && <p>NIP. {atasanNip}</p>}
       </div>
       <div className="text-left">
         <p>{namaKabupaten}, {tanggalLabel}</p>
@@ -44,4 +51,11 @@ export function PrintSignature({ settings, namaPengawas = '____________________'
       </div>
     </div>
   )
+}
+
+// Bandingkan 2 nama orang secara longgar (case-insensitive, ignore tanda baca/gelar spasi ekstra)
+function namaSamaOrang(a, b) {
+  if (!a || !b) return false
+  const norm = (s) => String(s).toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ').trim()
+  return norm(a) === norm(b)
 }

@@ -10,6 +10,8 @@ export function buildDefaultSettings() {
     tahunPelajaran: '2025/2026',
     ketuaPokjawas: 'Subariyanto, S.Pd, M.Pd.I.',
     nipKetua: '197002122005011004',
+    kepalaKemenag: '',
+    nipKepalaKemenag: '',
     logoDataUrl: '',
     bobot: { perencanaan: 20, pelaksanaan: 20, budaya: 20, panca: 20, evaluasi: 20 }
   }

@@ -85,6 +85,8 @@ export default function PengaturanPage() {
             <Field label="Tahun Pelajaran"><input className="input" placeholder="2025/2026" value={form.tahunPelajaran} onChange={(e) => upd('tahunPelajaran', e.target.value)} /></Field>
             <Field label="Ketua Pokjawas"><input className="input" value={form.ketuaPokjawas} onChange={(e) => upd('ketuaPokjawas', e.target.value)} /></Field>
             <Field label="NIP Ketua"><input className="input" value={form.nipKetua} onChange={(e) => upd('nipKetua', e.target.value)} /></Field>
+            <Field label="Kepala Kantor Kemenag"><input className="input" placeholder="Diisi kalau Ketua Pokjawas yang membuat laporan sendiri" value={form.kepalaKemenag || ''} onChange={(e) => upd('kepalaKemenag', e.target.value)} /></Field>
+            <Field label="NIP Kepala Kemenag"><input className="input" value={form.nipKepalaKemenag || ''} onChange={(e) => upd('nipKepalaKemenag', e.target.value)} /></Field>
           </div>
         </div>
         <div className="card-pad lg:col-span-1">
