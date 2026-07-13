@@ -48,6 +48,59 @@ export default function PengawasPage() {
     toast.success('Data CSV diunduh')
   }
 
+  // Kalau cuma ada 1 pengawas (kasus umum: 1 madrasah dampingan 1 pengawas),
+  // tampilkan form isian langsung di halaman ini, tanpa perlu buka modal edit.
+  const single = scope.pengawasList.length <= 1 ? (scope.pengawasList[0] || null) : null
+  const showQuickForm = scope.pengawasList.length <= 1
+
+  if (showQuickForm) {
+    return (
+      <>
+        <PageHeader
+          title="Data Pengawas Pendamping"
+          description="Isi data diri pengawas pendamping piloting KBC."
+          icon="🧑‍🏫"
+          actions={
+            <>
+              <button className="btn-ghost" onClick={() => setPrint(true)}>🖨 Cetak</button>
+              <button className="btn-ghost" onClick={exportCSV}>⬇ CSV</button>
+            </>
+          }
+        />
+
+        <div className="card-pad">
+          <FormPengawas value={single || EMPTY} onSave={onSave} submitLabel={single ? '💾 Simpan Perubahan' : '💾 Simpan Data Pengawas'} />
+        </div>
+
+        <ConfirmDialog
+          open={!!confirm}
+          onClose={() => setConfirm(null)}
+          onConfirm={() => { remove('pengawas', confirm.id); toast.success('Pengawas dihapus') }}
+          title="Hapus Pengawas"
+          message={`Yakin menghapus ${confirm?.nama}? Madrasah binaan akan kehilangan referensi pengawas.`}
+        />
+
+        {print && (
+          <Modal open onClose={() => setPrint(false)} title="Pratinjau Cetak — Pengawas" size="xl"
+            footer={<><button className="btn-ghost" onClick={() => setPrint(false)}>Tutup</button><button className="btn-primary" onClick={() => printPrintArea()}>🖨 Cetak</button></>}>
+            <div className="print-area bg-white p-6">
+              <PrintHeader settings={state.settings} judul="DAFTAR PENGAWAS PENDAMPING PILOTING KBC" />
+              <table className="table-clean">
+                <thead><tr><th>No</th><th>Nama</th><th>NIP</th><th>Pangkat</th><th>Jabatan</th><th>Wilayah</th><th>Dampingan</th></tr></thead>
+                <tbody>
+                  {data.map((p, i) => (
+                    <tr key={p.id}><td>{i + 1}</td><td>{p.nama}</td><td>{p.nip}</td><td>{p.pangkat}</td><td>{p.jabatan}</td><td>{p.wilayah}</td><td>{p.jumlah}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-6 text-xs text-slate-500">Dicetak {formatDate(new Date())}.</p>
+            </div>
+          </Modal>
+        )}
+      </>
+    )
+  }
+
   return (
     <>
       <PageHeader
