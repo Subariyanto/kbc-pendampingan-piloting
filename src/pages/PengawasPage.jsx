@@ -202,7 +202,7 @@ export default function PengawasPage() {
   )
 }
 
-function FormPengawas({ value, onSave }) {
+function FormPengawas({ value, onSave, submitLabel = '💾 Simpan' }) {
   const [form, setForm] = useState(value)
   const upd = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   const submit = (e) => { e.preventDefault(); onSave(form) }
@@ -215,6 +215,9 @@ function FormPengawas({ value, onSave }) {
       <Field label="Wilayah Binaan"><input className="input" value={form.wilayah} onChange={(e) => upd('wilayah', e.target.value)} /></Field>
       <Field label="Nomor HP"><input className="input" value={form.hp} onChange={(e) => upd('hp', e.target.value)} /></Field>
       <Field label="Email"><input className="input" type="email" value={form.email} onChange={(e) => upd('email', e.target.value)} /></Field>
+      <div className="sm:col-span-2 flex justify-end pt-2">
+        <button type="submit" className="btn-primary">{submitLabel}</button>
+      </div>
     </form>
   )
 }
