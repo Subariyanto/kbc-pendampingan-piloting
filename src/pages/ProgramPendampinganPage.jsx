@@ -1,29 +1,76 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import PageHeader from '../components/PageHeader.jsx'
-import Modal, { ConfirmDialog } from '../components/Modal.jsx'
-import { printPrintArea } from '../lib/printHelper.js'
-import { sourceBlocks } from '../data_programDokumen.js'
 
-const KEY='kbc_program_pendampingan_programs_v2'
-const titles=['Sampul','Kata Pengantar','Lembar Pengesahan','Daftar Isi','BAB I — Pendahuluan','BAB II — Konsep Dasar KBC','BAB III — Desain Program Pendampingan','BAB IV — Strategi, Metode, dan Instrumen','BAB V — Rencana Operasional','BAB VI — Pelaporan, Aplikasi, dan Tindak Lanjut','BAB VII — Penutup','Daftar Rujukan','Lampiran 1 — Identitas Madrasah Piloting','Lampiran 2 — Jadwal Pendampingan','Lampiran 3 — Catatan Hasil Pendampingan','Lampiran 4 — Daftar Hadir','Lampiran 5 — Berita Acara','Lampiran 6 — Rekap Eviden KBC','Lampiran 7 — Rekomendasi dan RTL','Lampiran 8 — Rekap Capaian KBC','Lampiran 9 — Instrumen Monitoring','Lampiran 10 — Laporan Singkat']
-const starts=['DOKUMEN PROGRAM','KATA PENGANTAR','LEMBAR PENGESAHAN','DAFTAR ISI','BAB IPENDAHULUAN','BAB IIKONSEP','BAB IIIDESAIN','BAB IVSTRATEGI','BAB VRENCANA','BAB VIPELAPORAN','BAB VIIPENUTUP','DAFTAR RUJUKAN','Lampiran 1.','Lampiran 2.','Lampiran 3.','Lampiran 4.','Lampiran 5.','Lampiran 6.','Lampiran 7.','Lampiran 8.','Lampiran 9.','Lampiran 10.']
-function sectionsFromSource(){const out=[];let active=-1;sourceBlocks.forEach(text=>{const hit=starts.findIndex(x=>text.startsWith(x));if(hit>=0)active=hit;if(active>=0){if(!out[active])out[active]={id:`section-${active+1}`,title:titles[active],content:''};out[active].content+=(out[active].content?'\n\n':'')+text}});return out.filter(Boolean)}
-function defaultProgram(){return {id:'program-default',name:'Program Pendampingan Pengawas KBC 2026/2027',description:'Pedoman operasional pendampingan, monitoring, evaluasi, pelaporan, dan tindak lanjut implementasi KBC.',status:'Draft',updatedAt:new Date().toISOString(),sections:sectionsFromSource()}}
-function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(x)&&x.length)return x;const legacy=JSON.parse(localStorage.getItem('kbc_program_pendampingan_full_v1'));if(Array.isArray(legacy)&&legacy.length)return [{...defaultProgram(),sections:legacy}];return [defaultProgram()]}catch{return [defaultProgram()]}}
-const words=p=>p.sections.reduce((n,s)=>n+s.content.trim().split(/\s+/).filter(Boolean).length,0)
-export default function ProgramPendampinganPage(){
- const [programs,setPrograms]=useState(load),[query,setQuery]=useState(''),[editing,setEditing]=useState(null),[preview,setPreview]=useState(null),[deleting,setDeleting]=useState(null)
- useEffect(()=>localStorage.setItem(KEY,JSON.stringify(programs)),[programs])
- const filtered=useMemo(()=>programs.filter(p=>`${p.name} ${p.description} ${p.status}`.toLowerCase().includes(query.toLowerCase())),[programs,query])
- const save=p=>{const item={...p,name:p.name.trim()};if(!item.name)return;setPrograms(a=>a.some(x=>x.id===item.id)?a.map(x=>x.id===item.id?item:x):[...a,{...item,id:crypto.randomUUID(),updatedAt:new Date().toISOString()}]);setEditing(null)}
- const remove=()=>{setPrograms(a=>a.filter(p=>p.id!==deleting.id));setDeleting(null)}
- return <><PageHeader title="Program Pendampingan Pengawas" icon="📘" description={`${programs.length} program tersimpan`} actions={<button className="btn-primary" onClick={()=>setEditing({name:'Program Pendampingan Baru',description:'',status:'Draft',sections:sectionsFromSource()})}>＋ Tambah Program</button>}/>
-  <div className="card-pad mb-5 flex flex-col sm:flex-row gap-3"><input className="input flex-1" placeholder="Cari program pendampingan…" value={query} onChange={e=>setQuery(e.target.value)}/><span className="text-sm text-slate-500 self-center">{filtered.length} program</span></div>
-  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{filtered.map(p=><article className="card p-5 flex flex-col" key={p.id}><div className="flex justify-between gap-3"><div className="text-3xl">📘</div><span className="badge">{p.status||'Draft'}</span></div><h2 className="font-semibold text-lg text-navy-900 mt-3">{p.name}</h2><p className="text-sm text-slate-600 mt-2 line-clamp-3 flex-1">{p.description||'Dokumen program pendampingan pengawas.'}</p><div className="text-xs text-slate-500 mt-4">{p.sections.length} bagian · {words(p).toLocaleString('id-ID')} kata</div><div className="flex flex-wrap gap-2 mt-4"><button className="btn-primary btn-sm" onClick={()=>setPreview(p)}>👁 Preview</button><button className="btn-ghost btn-sm" onClick={()=>setEditing(p)}>✎ Edit</button><button className="btn-ghost btn-sm" onClick={()=>exportWord(p)}>📄 Word</button><button className="btn-ghost btn-sm" onClick={()=>{setPreview(p);setTimeout(()=>printPrintArea({title:p.name}),100)}}>🖨 PDF</button><button className="btn-danger btn-sm" onClick={()=>setDeleting(p)}>Hapus</button></div></article>)}</div>
-  {!filtered.length&&<div className="card-pad text-center text-slate-500">Program tidak ditemukan.</div>}
-  {editing&&<ProgramForm item={editing} onClose={()=>setEditing(null)} onSave={save}/>} {preview&&<PreviewModal program={preview} onClose={()=>setPreview(null)}/>}<ConfirmDialog open={Boolean(deleting)} onClose={()=>setDeleting(null)} onConfirm={remove} title="Hapus Program" message={`Yakin menghapus ${deleting?.name||''}?`}/>
- </>
+const STORAGE_KEY = 'kbc_program_pendampingan_drive_url'
+
+function loadDriveUrl() {
+  try {
+    return localStorage.getItem(STORAGE_KEY) || ''
+  } catch {
+    return ''
+  }
 }
-function ProgramForm({item,onClose,onSave}){const [f,setF]=useState(item);const patch=(k,v)=>setF({...f,[k]:v});return <Modal open onClose={onClose} size="xl" title={item.id?'Edit Program':'Tambah Program'} footer={<><button className="btn-ghost" onClick={onClose}>Batal</button><button className="btn-primary" onClick={()=>onSave({...f,updatedAt:new Date().toISOString()})}>Simpan</button></>}><div className="space-y-3"><input className="input" value={f.name} onChange={e=>patch('name',e.target.value)} placeholder="Nama program"/><textarea className="input" rows="2" value={f.description} onChange={e=>patch('description',e.target.value)} placeholder="Deskripsi singkat"/><select className="input" value={f.status||'Draft'} onChange={e=>patch('status',e.target.value)}><option>Draft</option><option>Aktif</option><option>Selesai</option></select><div className="border-t pt-3"><p className="font-semibold mb-2">Isi lengkap dokumen</p><div className="space-y-3 max-h-[55vh] overflow-auto pr-1">{f.sections.map((s,i)=><div className="card p-3" key={s.id}><input className="input mb-2" value={s.title} onChange={e=>{const a=[...f.sections];a[i]={...s,title:e.target.value};patch('sections',a)}}/><textarea className="input font-mono text-xs" rows="7" value={s.content} onChange={e=>{const a=[...f.sections];a[i]={...s,content:e.target.value};patch('sections',a)}}/></div>)}</div></div></div></Modal>}
-function PreviewModal({program,onClose}){return <Modal open onClose={onClose} size="xl" title={`Preview — ${program.name}`} footer={<><button className="btn-ghost" onClick={onClose}>Tutup</button><button className="btn-primary" onClick={()=>printPrintArea({title:program.name})}>🖨 Unduh / Cetak PDF</button></>}><div className="print-area program-document bg-white">{program.sections.map((s,i)=><section className={`doc-page ${i===0?'cover-page':''}`} key={s.id}><h1>{s.title}</h1>{s.content.split(/\n\n+/).map((p,n)=><p key={n}>{p}</p>)}</section>)}</div></Modal>}
-function exportWord(p){const html=p.sections.map(s=>`<h1>${s.title}</h1>${s.content.split(/\n\n+/).map(x=>`<p>${x.replaceAll('&','&amp;').replaceAll('<','&lt;')}</p>`).join('')}`).join('');const blob=new Blob([`<html><meta charset="utf-8"><body>${html}</body></html>`],{type:'application/msword'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${p.name.replace(/[^a-z0-9]+/gi,'-')}.doc`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+
+export default function ProgramPendampinganPage() {
+  const [driveUrl, setDriveUrl] = useState(loadDriveUrl)
+  const [draftUrl, setDraftUrl] = useState(loadDriveUrl)
+  const [isEditing, setIsEditing] = useState(false)
+
+  const saveLink = () => {
+    const nextUrl = draftUrl.trim()
+    setDriveUrl(nextUrl)
+    localStorage.setItem(STORAGE_KEY, nextUrl)
+    setIsEditing(false)
+  }
+
+  const cancelEdit = () => {
+    setDraftUrl(driveUrl)
+    setIsEditing(false)
+  }
+
+  const downloadFile = () => {
+    if (driveUrl) window.open(driveUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  return <>
+    <PageHeader
+      title="Program Pendampingan Pengawas"
+      description="Akses dokumen program pendampingan pengawas melalui Google Drive."
+    />
+
+    <article className="card p-6 max-w-3xl">
+      <h2 className="text-xl font-semibold text-navy-900">Program Pendampingan Pengawas</h2>
+      <p className="mt-2 text-sm text-slate-600">
+        Dokumen acuan pelaksanaan pendampingan, monitoring, dan tindak lanjut oleh pengawas madrasah.
+      </p>
+
+      <div className="mt-6">
+        <label htmlFor="program-drive-url" className="block mb-2 text-sm font-medium text-slate-700">
+          Google Drive URL
+        </label>
+        <input
+          id="program-drive-url"
+          className="input w-full"
+          type="url"
+          placeholder="https://drive.google.com/..."
+          value={isEditing ? draftUrl : driveUrl}
+          onChange={event => setDraftUrl(event.target.value)}
+          readOnly={!isEditing}
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-2 mt-5">
+        <button className="btn-primary" type="button" onClick={downloadFile} disabled={!driveUrl}>
+          Unduh File
+        </button>
+        {isEditing ? <>
+          <button className="btn-primary" type="button" onClick={saveLink}>Simpan Link</button>
+          <button className="btn-ghost" type="button" onClick={cancelEdit}>Batal</button>
+        </> : (
+          <button className="btn-ghost" type="button" onClick={() => setIsEditing(true)}>Edit Link</button>
+        )}
+      </div>
+      {!driveUrl && !isEditing && <p className="mt-3 text-xs text-slate-500">Link Google Drive belum diatur.</p>}
+    </article>
+  </>
+}
