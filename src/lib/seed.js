@@ -436,11 +436,14 @@ export function buildSeedData() {
     }
   ]
 
+  // Data demo piloting dibatasi satu madrasah agar alur contoh lebih sederhana.
+  const madrasahPiloting = madrasah.slice(0, 1)
+
   return {
     settings: buildDefaultSettings(),
     instrumen,
     pengawas,
-    madrasah,
+    madrasah: madrasahPiloting,
     jadwal,
     pendampingan,
     tindakLanjut,
