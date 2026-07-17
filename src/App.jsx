@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import MadrasahPage from './pages/MadrasahPage.jsx'
 import PengawasPage from './pages/PengawasPage.jsx'
+import ProgramPendampinganPage from './pages/ProgramPendampinganPage.jsx'
 import JadwalPage from './pages/JadwalPage.jsx'
 import InstrumenPage from './pages/InstrumenPage.jsx'
 import PendampinganPage from './pages/PendampinganPage.jsx'
@@ -122,6 +123,7 @@ export default function App() {
                     path="/pengawas"
                     element={<PengawasPage />}
                   />
+                  <Route path="/program-pendampingan" element={<ProgramPendampinganPage />} />
                   <Route path="/jadwal" element={<JadwalPage />} />
                   <Route
                     path="/instrumen"
