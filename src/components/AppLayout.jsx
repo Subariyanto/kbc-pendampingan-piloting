@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { to: '/madrasah', label: 'Madrasah Piloting', icon: '🏫', roles: ['admin', 'pengawas'] },
   { to: '/jadwal', label: 'Jadwal Pendampingan', icon: '🗓️', roles: ['admin', 'pengawas'] },
   { to: '/instrumen', label: 'Instrumen KBC', icon: '📋', roles: ['admin', 'pengawas'] },
-  { to: '/pendampingan', label: 'Hasil Pendampingan', icon: '📝', roles: ['admin', 'pengawas'] },
+  { to: '/pendampingan', label: 'Instrumen Pendampingan', icon: '📝', roles: ['admin', 'pengawas'] },
   { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas'] },
   { to: '/contoh-eviden', label: 'Contoh Eviden', icon: '🗂️', roles: ['admin', 'pengawas'] },
   { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas'] },
@@ -186,3 +186,4 @@ function Hamburger() {
     </svg>
   )
 }
+
