@@ -5,7 +5,7 @@ const STORAGE_KEY = 'kbc_program_pendampingan_drive_url'
 
 function loadDriveUrl() {
   try {
-    return localStorage.getItem(STORAGE_KEY) || ''
+    return localStorage.getItem(STORAGE_KEY) || 'https://docs.google.com/document/d/1EqQHfDpCkMXMHE9F7m9oOx1u1KUrSAQN/edit?usp=sharing&ouid=117736083828951249234&rtpof=true&sd=true'
   } catch {
     return ''
   }
