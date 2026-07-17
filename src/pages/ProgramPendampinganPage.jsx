@@ -5,7 +5,7 @@ import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { printPrintArea } from '../lib/printHelper.js'
 
-const KEY='kbc_program_pendampingan_v1'
+const KEY='kbc_program_pendampingan_v2'
 const kegiatanDefault=[
  {tahap:'Pra-Pendampingan',kegiatan:'Koordinasi pengawas, penetapan madrasah piloting, penyusunan jadwal, dan sosialisasi aplikasi',waktu:'Minggu 0',metode:'Koordinasi/FGD',sasaran:'Pokjawas dan Pengawas',indikator:'Daftar madrasah dan jadwal tersedia',eviden:'Daftar madrasah, jadwal, akun aplikasi'},
  {tahap:'Sosialisasi KBC',kegiatan:'Sosialisasi konsep KBC, Panca Cinta, pembelajaran berbasis cinta, budaya madrasah, dan eviden',waktu:'Minggu 1',metode:'Sosialisasi terarah',sasaran:'Kepala Madrasah, Tim KBC, Guru',indikator:'Pemahaman awal terbentuk',eviden:'Notulen, daftar hadir, materi, dokumentasi'},
@@ -43,5 +43,6 @@ function Field({label,value,onChange,type='text',options=[],placeholder}){return
 function Area({label,value,onChange}){return <div><label className="label">{label}</label><textarea className="input" rows="4" value={value||''} onChange={e=>onChange(e.target.value)}/></div>}
 function Info({label,value}){return <p className="text-sm"><span className="inline-block w-44 font-semibold">{label}</span>: {value}</p>}
 function Doc({title,text}){return <section className="mt-4"><h3 className="font-bold mb-1">{title}</h3><p className="whitespace-pre-line text-justify">{text}</p></section>}
+
 
 
