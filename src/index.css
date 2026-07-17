@@ -152,6 +152,11 @@
   table, tr, td, th { page-break-inside: avoid; }
   h1, h2, h3, h4 { page-break-after: avoid; }
 
+  /* Paksa mulai halaman baru untuk tiap bagian dokumen (Cover, Kata Pengantar, Daftar Isi, BAB, Lampiran) */
+  .print-page-break { page-break-before: always; break-before: page; }
+
   /* Margin halaman ringkas; orientasi/ukuran ikut pilihan user di dialog cetak */
   @page { margin: 10mm; }
 }
+
+.program-editor{display:grid;grid-template-columns:280px minmax(0,1fr);gap:1rem;align-items:start}.program-nav{position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow:auto}.program-nav-item{display:flex;width:100%;gap:.65rem;text-align:left;padding:.55rem .65rem;border-radius:.5rem;font-size:.78rem;color:#475569}.program-nav-item span{flex:none;width:1.35rem;height:1.35rem;border-radius:999px;background:#e2e8f0;text-align:center;line-height:1.35rem}.program-nav-item:hover,.program-nav-item.active{background:#eef2ff;color:#1e3a8a}.program-nav-item.active{font-weight:600}.program-textarea{min-height:65vh;line-height:1.6;font-family:Georgia,'Times New Roman',serif}.program-document{max-width:210mm;margin:0 auto;background:#fff;color:#111;box-shadow:0 4px 20px #0002}.doc-page{padding:20mm;min-height:297mm;break-before:page;font-family:'Times New Roman',serif}.doc-page:first-child{break-before:auto}.doc-page h1{text-align:center;font-size:20px;font-weight:700;text-transform:uppercase;margin-bottom:24px}.doc-page p{white-space:pre-wrap;text-align:justify;line-height:1.55;margin-bottom:12px;font-size:16px}.doc-table-text{border:1px solid #475569;padding:12px;white-space:pre-wrap;font-size:14px;line-height:1.5;margin:12px 0}.cover-page{display:flex;flex-direction:column;justify-content:center;text-align:center}.cover-page p{text-align:center}.print-only{position:absolute;left:-100000px;top:0}@media(max-width:800px){.program-editor{grid-template-columns:1fr}.program-nav{position:static;max-height:260px}}@media print{.program-document{box-shadow:none;max-width:none}.doc-page{padding:15mm}.print-only{position:static}}
