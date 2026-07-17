@@ -11,6 +11,7 @@ import JadwalPage from './pages/JadwalPage.jsx'
 import InstrumenPage from './pages/InstrumenPage.jsx'
 import PendampinganPage from './pages/PendampinganPage.jsx'
 import EvidenPage from './pages/EvidenPage.jsx'
+import ContohEvidenPage from './pages/ContohEvidenPage.jsx'
 import TindakLanjutPage from './pages/TindakLanjutPage.jsx'
 import LaporanPage from './pages/LaporanPage.jsx'
 import LaporanLengkapPage from './pages/LaporanLengkapPage.jsx'
@@ -128,6 +129,7 @@ export default function App() {
                   />
                   <Route path="/pendampingan" element={<PendampinganPage />} />
                   <Route path="/eviden" element={<EvidenPage />} />
+                  <Route path="/contoh-eviden" element={<ContohEvidenPage />} />
                   <Route path="/tindak-lanjut" element={<TindakLanjutPage />} />
                   <Route path="/laporan" element={<LaporanPage />} />
                   <Route path="/laporan-lengkap" element={<LaporanLengkapPage />} />

@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/instrumen', label: 'Instrumen KBC', icon: '📋', roles: ['admin', 'pengawas'] },
   { to: '/pendampingan', label: 'Hasil Pendampingan', icon: '📝', roles: ['admin', 'pengawas'] },
   { to: '/eviden', label: 'Eviden / Bukti', icon: '📎', roles: ['admin', 'pengawas'] },
+  { to: '/contoh-eviden', label: 'Contoh Eviden', icon: '🗂️', roles: ['admin', 'pengawas'] },
   { to: '/tindak-lanjut', label: 'Rekomendasi & TL', icon: '✅', roles: ['admin', 'pengawas'] },
   { to: '/laporan', label: 'Capaian Madrasah Piloting', icon: '📊', roles: ['admin', 'pengawas'] },
   { to: '/laporan-lengkap', label: 'Laporan Lengkap', icon: '📖', roles: ['admin', 'pengawas'] },
